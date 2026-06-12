@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Eye, EyeOff, Loader2, Truck } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,25 +41,12 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
 
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-10">
-            <div
-              className="flex items-center justify-center rounded-xl shrink-0"
-              style={{
-                width: 44,
-                height: 44,
-                background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-              }}
-            >
-              <Truck size={22} color="#fff" />
-            </div>
-            <div>
-              <p style={{ color: '#F8FAFC', fontSize: '1.1rem', fontWeight: 700, lineHeight: 1.2 }}>
-                FleetAdmin
-              </p>
-              <p style={{ color: '#64748B', fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Super Admin Portal
-              </p>
-            </div>
+          <div className="mb-10">
+            <img
+              src="/db-logo.png"
+              alt="DB Logo"
+              className="h-12 object-contain"
+            />
           </div>
 
           {/* Heading */}

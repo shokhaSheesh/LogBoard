@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   Lock,
   ChevronRight,
-  Zap,
 } from 'lucide-react';
 
 interface NavItemDef {
@@ -108,27 +107,24 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* ── Header: logo ────────────────────────────────────────────── */}
       <div
         className={`flex items-center border-b shrink-0 ${
-          collapsed ? 'justify-center px-3 py-5' : 'gap-3 px-5 py-5'
+          collapsed ? 'justify-center px-3 py-4' : 'px-5 py-4'
         }`}
         style={{ borderColor: 'var(--sidebar-border)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
-          style={{ backgroundColor: 'var(--sidebar-primary)' }}
-        >
-          <Zap size={16} className="text-white" />
-        </div>
-
-        {!collapsed && (
-          <div className="flex-1 min-w-0">
-            <div style={{ color: '#F1F5F9', fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
-              FleetAdmin
-            </div>
-            <div style={{ color: 'var(--sidebar-foreground)', fontSize: '0.7rem', opacity: 0.6, lineHeight: 1 }}>
-              Super Admin
-            </div>
-          </div>
+        {collapsed ? (
+          <img
+            src="/db-logo.png"
+            alt="DB Logo"
+            className="w-8 h-8 object-contain"
+          />
+        ) : (
+          <img
+            src="/db-logo.png"
+            alt="DB Logo"
+            className="h-9 object-contain"
+            style={{ maxWidth: 160 }}
+          />
         )}
       </div>
 
