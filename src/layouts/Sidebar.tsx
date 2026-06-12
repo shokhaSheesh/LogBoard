@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   Lock,
   ChevronRight,
-  ChevronLeft,
   Zap,
 } from 'lucide-react';
 
@@ -43,7 +42,7 @@ function NavItem({ item, collapsed }: { item: NavItemDef; collapsed: boolean }) 
         {({ isActive }) => (
           <div
             className={`w-full flex items-center rounded-lg transition-all duration-150 cursor-pointer ${
-              collapsed ? 'justify-center px-0 py-2.5 mx-0' : 'gap-3 px-3 py-2.5'
+              collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'
             }`}
             style={{
               backgroundColor: isActive ? '#2563EB' : hovered ? 'var(--sidebar-accent)' : 'transparent',
@@ -76,7 +75,6 @@ function NavItem({ item, collapsed }: { item: NavItemDef; collapsed: boolean }) 
               </>
             )}
 
-            {/* Badge dot when collapsed */}
             {collapsed && item.badge && (
               <span
                 className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full"
@@ -90,9 +88,12 @@ function NavItem({ item, collapsed }: { item: NavItemDef; collapsed: boolean }) 
   );
 }
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
 
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={`relative flex flex-col h-full shrink-0 select-none overflow-hidden transition-[width] duration-300 ease-in-out ${
@@ -102,9 +103,9 @@ export function Sidebar() {
         backgroundColor: 'var(--sidebar)',
         borderRight: '1px solid var(--sidebar-border)',
       }}
-      onClick={() => { if (collapsed) setCollapsed(false); }}
+      onClick={() => { if (collapsed) onToggle(); }}
     >
-      {/* ── Header: logo + collapse toggle ─────────────────────────── */}
+      {/* ── Header: logo ────────────────────────────────────────────── */}
       <div
         className={`flex items-center border-b shrink-0 ${
           collapsed ? 'justify-center px-3 py-5' : 'gap-3 px-5 py-5'
@@ -112,7 +113,6 @@ export function Sidebar() {
         style={{ borderColor: 'var(--sidebar-border)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Logo icon — always visible */}
         <div
           className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
           style={{ backgroundColor: 'var(--sidebar-primary)' }}
@@ -120,7 +120,6 @@ export function Sidebar() {
           <Zap size={16} className="text-white" />
         </div>
 
-        {/* Brand text — only when expanded */}
         {!collapsed && (
           <div className="flex-1 min-w-0">
             <div style={{ color: '#F1F5F9', fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
@@ -130,28 +129,6 @@ export function Sidebar() {
               Super Admin
             </div>
           </div>
-        )}
-
-        {/* Collapse button — only when expanded */}
-        {!collapsed && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setCollapsed(true); }}
-            className="w-6 h-6 flex items-center justify-center rounded-md shrink-0 transition-all duration-150"
-            style={{ color: 'var(--sidebar-foreground)', opacity: 0.4 }}
-            title="Collapse sidebar"
-            onMouseEnter={(e) => {
-              const el = e.currentTarget;
-              el.style.opacity = '1';
-              el.style.backgroundColor = 'var(--sidebar-accent)';
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget;
-              el.style.opacity = '0.4';
-              el.style.backgroundColor = 'transparent';
-            }}
-          >
-            <ChevronLeft size={15} />
-          </button>
         )}
       </div>
 
@@ -186,7 +163,6 @@ export function Sidebar() {
         onClick={(e) => e.stopPropagation()}
       >
         {collapsed ? (
-          /* Collapsed: avatar only, centered */
           <div className="flex justify-center">
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center"
@@ -197,7 +173,6 @@ export function Sidebar() {
             </div>
           </div>
         ) : (
-          /* Expanded: full card */
           <div
             className="rounded-xl p-3 flex items-center gap-3"
             style={{ backgroundColor: 'var(--sidebar-accent)' }}

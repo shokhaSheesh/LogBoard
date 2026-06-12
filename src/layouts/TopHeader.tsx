@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router';
-import { Bell, Search, ChevronRight } from 'lucide-react';
+import { Bell, Search, ChevronRight, Menu } from 'lucide-react';
 
 interface Crumb {
   label: string;
@@ -15,7 +15,11 @@ const BREADCRUMB_MAP: Record<string, Crumb[]> = {
   '/admin/roles-permissions': [{ label: 'Home' }, { label: 'Security' }, { label: 'Roles & Permissions', active: true }],
 };
 
-export function TopHeader() {
+interface TopHeaderProps {
+  onToggleSidebar: () => void;
+}
+
+export function TopHeader({ onToggleSidebar }: TopHeaderProps) {
   const { pathname } = useLocation();
   const breadcrumbs = BREADCRUMB_MAP[pathname] ?? [{ label: 'Home' }, { label: pathname.split('/').pop() ?? '', active: true }];
 
@@ -24,6 +28,25 @@ export function TopHeader() {
       className="flex items-center justify-between px-6 h-16 shrink-0"
       style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--border)' }}
     >
+      {/* Left: menu toggle + breadcrumb */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onToggleSidebar}
+          className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
+          style={{ color: 'var(--muted-foreground)' }}
+          title="Toggle sidebar"
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--foreground)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted-foreground)';
+          }}
+        >
+          <Menu size={18} />
+        </button>
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5">
         {breadcrumbs.map((crumb, i) => (
@@ -43,6 +66,7 @@ export function TopHeader() {
           </div>
         ))}
       </nav>
+      </div>
 
       {/* Right controls */}
       <div className="flex items-center gap-3">
