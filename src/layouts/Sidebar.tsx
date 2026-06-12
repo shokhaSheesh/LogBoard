@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router';
+import dbLogo from '@/assets/db-logo.png';
 import {
   LayoutDashboard,
   Building2,
@@ -114,15 +115,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       >
         {collapsed ? (
           <img
-            src="/db-logo.png"
+            src={dbLogo}
             alt="DB Logo"
-            style={{ width: 32, height: 32, objectFit: 'contain', display: 'block' }}
+            style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }}
           />
         ) : (
           <img
-            src="/db-logo.png"
+            src={dbLogo}
             alt="DB Logo"
-            style={{ height: 40, width: 'auto', maxWidth: 180, display: 'block' }}
+            style={{ width: 176, height: 52, objectFit: 'contain', objectPosition: 'left center', display: 'block' }}
           />
         )}
       </div>

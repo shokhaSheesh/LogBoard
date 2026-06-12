@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import dbLogo from '@/assets/db-logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,9 +44,9 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="mb-10">
             <img
-              src="/db-logo.png"
+              src={dbLogo}
               alt="DB Logo"
-              className="h-12 object-contain"
+              style={{ width: 200, height: 60, objectFit: 'contain', objectPosition: 'left center', display: 'block' }}
             />
           </div>
 
