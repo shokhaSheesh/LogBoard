@@ -85,13 +85,59 @@ const subscriptionPlans = [
 
 const YEARS = ['2024', '2025', '2026'];
 
-const TOOLTIP_STYLE = {
-  backgroundColor: 'var(--card)',
-  border: '1px solid var(--border)',
-  borderRadius: 8,
+const TIP_BASE: React.CSSProperties = {
+  backgroundColor: '#fff',
+  border: '1px solid #E5E7EB',
+  borderRadius: 10,
+  padding: '10px 14px',
+  boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
   fontSize: 12,
-  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+  lineHeight: 1.4,
+  pointerEvents: 'none',
 };
+
+function TipRow({ color, label, value }: { color: string; label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+      <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block' }} />
+      <span style={{ color: '#6B7280', flex: 1 }}>{label}</span>
+      <span style={{ fontWeight: 700, color: '#111827' }}>{value}</span>
+    </div>
+  );
+}
+
+function AreaTip({ active, payload, label: month }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={TIP_BASE}>
+      <div style={{ fontWeight: 600, color: '#111827', marginBottom: 6, fontSize: 12 }}>{month}</div>
+      {payload.map((p: any) => (
+        <TipRow key={p.dataKey} color={p.color} label={p.name === 'companies' ? 'Companies' : p.name === 'drivers' ? 'Drivers' : 'Loads'} value={p.value.toLocaleString()} />
+      ))}
+    </div>
+  );
+}
+
+function BarTip({ active, payload, label: company }: any) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0];
+  return (
+    <div style={TIP_BASE}>
+      <div style={{ fontWeight: 600, color: '#111827', marginBottom: 6, fontSize: 12 }}>{company}</div>
+      <TipRow color={p.fill} label={p.name === 'drivers' ? 'Drivers' : 'Loads'} value={p.value.toLocaleString()} />
+    </div>
+  );
+}
+
+function PieTip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0];
+  return (
+    <div style={TIP_BASE}>
+      <TipRow color={p.payload.color} label={p.name} value={`${p.value}%`} />
+    </div>
+  );
+}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -269,10 +315,9 @@ export default function DashboardPage() {
         <StatCard label="Total Monthly Loads" value="15,400" change="+8.9%" icon={<Package size={20} />}   color="#10B981" bg="#ECFDF5" spark={sparkLoads} />
       </div>
 
-      {/* ── Row 2: Companies growth + Drivers growth + Subscription pie ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+      {/* ── Row 2: Companies Growth + Drivers Growth ────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
 
-        {/* Companies Growth */}
         <CardShell
           title={<CardTitle>Companies Growth</CardTitle>}
           action={<YearPicker value={companyYear} onChange={setCompanyYear} />}
@@ -289,14 +334,13 @@ export default function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [v.toLocaleString(), 'Companies']} />
+                <Tooltip content={<AreaTip />} />
                 <Area type="monotone" dataKey="companies" stroke="#2563EB" strokeWidth={2.5} fill="url(#gc)" dot={false} activeDot={{ r: 5, fill: '#2563EB', strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </CardShell>
 
-        {/* Drivers Growth */}
         <CardShell
           title={<CardTitle>Drivers Growth</CardTitle>}
           action={<YearPicker value={driverYear} onChange={setDriverYear} />}
@@ -313,26 +357,58 @@ export default function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [v.toLocaleString(), 'Drivers']} />
+                <Tooltip content={<AreaTip />} />
                 <Area type="monotone" dataKey="drivers" stroke="#8B5CF6" strokeWidth={2.5} fill="url(#gd)" dot={false} activeDot={{ r: 5, fill: '#8B5CF6', strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </CardShell>
+      </div>
 
-        {/* Subscription doughnut */}
+      {/* ── Row 3: Monthly Loads Volume + Subscription Plans ────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+
+        <div className="lg:col-span-2">
+          <CardShell
+            title={<CardTitle>Monthly Loads Volume</CardTitle>}
+            action={<YearPicker value={loadsYear} onChange={setLoadsYear} />}
+          >
+            <div style={{ padding: '16px 12px 8px' }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={monthlyLoads[loadsYear]} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#10B981" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false}
+                    tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}
+                  />
+                  <Tooltip content={<AreaTip />} />
+                  <Area type="monotone" dataKey="loads" stroke="#10B981" strokeWidth={2.5} fill="url(#gl)" dot={false} activeDot={{ r: 5, fill: '#10B981', strokeWidth: 0 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardShell>
+        </div>
+
         <CardShell title={<CardTitle>Subscription Plans</CardTitle>}>
           <div style={{ padding: '16px 0 12px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <ResponsiveContainer width="100%" height={170}>
+            <ResponsiveContainer width="100%" height={180}>
               <PieChart>
                 <Pie
                   data={subscriptionPlans} cx="50%" cy="50%"
-                  outerRadius={75} innerRadius={38}
+                  outerRadius={78} innerRadius={40}
                   dataKey="value" labelLine={false}
                   label={PieLabel as any} strokeWidth={0}
                 >
                   {subscriptionPlans.map((e) => <Cell key={e.name} fill={e.color} />)}
                 </Pie>
+                <Tooltip content={<PieTip />} />
               </PieChart>
             </ResponsiveContainer>
             <div style={{ width: '100%', padding: '4px 24px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -350,35 +426,6 @@ export default function DashboardPage() {
         </CardShell>
       </div>
 
-      {/* ── Row 3: Monthly Loads ─────────────────────────────────────── */}
-      <div className="mb-5">
-        <CardShell
-          title={<CardTitle>Monthly Loads Volume</CardTitle>}
-          action={<YearPicker value={loadsYear} onChange={setLoadsYear} />}
-        >
-          <div style={{ padding: '16px 12px 8px' }}>
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={monthlyLoads[loadsYear]} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#10B981" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                <YAxis
-                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false}
-                  tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}
-                />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [v.toLocaleString(), 'Loads']} />
-                <Area type="monotone" dataKey="loads" stroke="#10B981" strokeWidth={2.5} fill="url(#gl)" dot={false} activeDot={{ r: 5, fill: '#10B981', strokeWidth: 0 }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </CardShell>
-      </div>
-
       {/* ── Row 4: Bottom — Drivers per Company + Loads prev vs curr ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
@@ -389,6 +436,7 @@ export default function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="company" width={72} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<BarTip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
                 <Bar dataKey="drivers" fill="#8B5CF6" radius={[0, 4, 4, 0]} barSize={13} />
               </BarChart>
             </ResponsiveContainer>
@@ -405,6 +453,7 @@ export default function DashboardPage() {
                   tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false}
                   tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                 />
+                <Tooltip content={<BarTip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
                 <Bar dataKey="curr" fill="#2563EB" radius={[3, 3, 0, 0]} barSize={22} />
               </BarChart>
             </ResponsiveContainer>
