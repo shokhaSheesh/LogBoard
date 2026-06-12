@@ -107,8 +107,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* ── Header: logo ────────────────────────────────────────────── */}
       <div
-        className={`flex items-center border-b shrink-0 ${
-          collapsed ? 'justify-center px-3 py-4' : 'px-5 py-4'
+        className={`flex items-center justify-center border-b shrink-0 ${
+          collapsed ? 'py-3' : 'py-4'
         }`}
         style={{ borderColor: 'var(--sidebar-border)' }}
         onClick={(e) => e.stopPropagation()}
@@ -117,13 +117,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <img
             src={dbLogo}
             alt="DB Logo"
-            style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }}
+            style={{ width: 40, height: 40, objectFit: 'contain', display: 'block' }}
           />
         ) : (
           <img
             src={dbLogo}
             alt="DB Logo"
-            style={{ width: 176, height: 52, objectFit: 'contain', objectPosition: 'left center', display: 'block' }}
+            style={{ width: 120, height: 120, objectFit: 'contain', display: 'block' }}
           />
         )}
       </div>
