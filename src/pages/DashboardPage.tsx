@@ -218,8 +218,9 @@ function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const [trendYear, setTrendYear] = useState('2026');
-  const [loadsYear, setLoadsYear] = useState('2026');
+  const [companyYear, setCompanyYear] = useState('2026');
+  const [driverYear,  setDriverYear]  = useState('2026');
+  const [loadsYear,   setLoadsYear]   = useState('2026');
 
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
@@ -268,52 +269,58 @@ export default function DashboardPage() {
         <StatCard label="Total Monthly Loads" value="15,400" change="+8.9%" icon={<Package size={20} />}   color="#10B981" bg="#ECFDF5" spark={sparkLoads} />
       </div>
 
-      {/* ── Row 2: Multi-line trend + Subscription doughnut ─────────── */}
+      {/* ── Row 2: Companies growth + Drivers growth + Subscription pie ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
 
-        <div className="lg:col-span-2">
-          <CardShell
-            title={
-              <div>
-                <CardTitle>Companies &amp; Drivers Growth</CardTitle>
-                <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
-                  {[['#2563EB', 'Companies'], ['#8B5CF6', 'Drivers']].map(([c, l]) => (
-                    <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', color: 'var(--muted-foreground)' }}>
-                      <span style={{ display: 'inline-block', width: 12, height: 2, borderRadius: 2, backgroundColor: c }} />
-                      {l}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            }
-            action={<YearPicker value={trendYear} onChange={setTrendYear} />}
-          >
-            <div style={{ padding: '16px 12px 8px' }}>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={monthlyTrend[trendYear]} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="gc" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#2563EB" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#8B5CF6" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE}
-                    formatter={(val: number, key: string) => [val.toLocaleString(), key === 'companies' ? 'Companies' : 'Drivers']} />
-                  <Area type="monotone" dataKey="companies" stroke="#2563EB" strokeWidth={2.5} fill="url(#gc)" dot={false} activeDot={{ r: 5, fill: '#2563EB', strokeWidth: 0 }} />
-                  <Area type="monotone" dataKey="drivers"   stroke="#8B5CF6" strokeWidth={2.5} fill="url(#gd)" dot={false} activeDot={{ r: 5, fill: '#8B5CF6', strokeWidth: 0 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardShell>
-        </div>
+        {/* Companies Growth */}
+        <CardShell
+          title={<CardTitle>Companies Growth</CardTitle>}
+          action={<YearPicker value={companyYear} onChange={setCompanyYear} />}
+        >
+          <div style={{ padding: '16px 12px 8px' }}>
+            <ResponsiveContainer width="100%" height={190}>
+              <AreaChart data={monthlyTrend[companyYear]} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gc" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#2563EB" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [v.toLocaleString(), 'Companies']} />
+                <Area type="monotone" dataKey="companies" stroke="#2563EB" strokeWidth={2.5} fill="url(#gc)" dot={false} activeDot={{ r: 5, fill: '#2563EB', strokeWidth: 0 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </CardShell>
 
+        {/* Drivers Growth */}
+        <CardShell
+          title={<CardTitle>Drivers Growth</CardTitle>}
+          action={<YearPicker value={driverYear} onChange={setDriverYear} />}
+        >
+          <div style={{ padding: '16px 12px 8px' }}>
+            <ResponsiveContainer width="100%" height={190}>
+              <AreaChart data={monthlyTrend[driverYear]} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#8B5CF6" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [v.toLocaleString(), 'Drivers']} />
+                <Area type="monotone" dataKey="drivers" stroke="#8B5CF6" strokeWidth={2.5} fill="url(#gd)" dot={false} activeDot={{ r: 5, fill: '#8B5CF6', strokeWidth: 0 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </CardShell>
+
+        {/* Subscription doughnut */}
         <CardShell title={<CardTitle>Subscription Plans</CardTitle>}>
           <div style={{ padding: '16px 0 12px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <ResponsiveContainer width="100%" height={170}>
@@ -326,7 +333,6 @@ export default function DashboardPage() {
                 >
                   {subscriptionPlans.map((e) => <Cell key={e.name} fill={e.color} />)}
                 </Pie>
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [`${v}%`, 'Share']} />
               </PieChart>
             </ResponsiveContainer>
             <div style={{ width: '100%', padding: '4px 24px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -383,39 +389,23 @@ export default function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="company" width={72} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [v.toLocaleString(), 'Drivers']} />
                 <Bar dataKey="drivers" fill="#8B5CF6" radius={[0, 4, 4, 0]} barSize={13} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </CardShell>
 
-        <CardShell
-          title={<CardTitle>Load Volume — Prev vs Current Month</CardTitle>}
-          action={
-            <div style={{ display: 'flex', gap: 12 }}>
-              {[['#CBD5E1', 'Prev'], ['#2563EB', 'Current']].map(([c, l]) => (
-                <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', color: 'var(--muted-foreground)' }}>
-                  <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, backgroundColor: c }} />
-                  {l}
-                </span>
-              ))}
-            </div>
-          }
-        >
+        <CardShell title={<CardTitle>Load Volume by Company</CardTitle>}>
           <div style={{ padding: '12px 16px 12px' }}>
             <ResponsiveContainer width="100%" height={236}>
-              <BarChart data={loadsPerCompany} margin={{ top: 4, right: 8, left: -10, bottom: 0 }} barGap={2}>
+              <BarChart data={loadsPerCompany} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="company" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                 <YAxis
                   tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false}
                   tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                 />
-                <Tooltip contentStyle={TOOLTIP_STYLE}
-                  formatter={(v: number, key: string) => [v.toLocaleString(), key === 'prev' ? 'Prev Month' : 'Current Month']} />
-                <Bar dataKey="prev" fill="#CBD5E1" radius={[3, 3, 0, 0]} barSize={16} />
-                <Bar dataKey="curr" fill="#2563EB" radius={[3, 3, 0, 0]} barSize={16} />
+                <Bar dataKey="curr" fill="#2563EB" radius={[3, 3, 0, 0]} barSize={22} />
               </BarChart>
             </ResponsiveContainer>
           </div>
