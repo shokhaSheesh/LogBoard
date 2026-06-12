@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router';
-import dbLogo from '@/assets/db-logo.png';
 import {
   LayoutDashboard,
   Building2,
@@ -9,6 +8,7 @@ import {
   ShieldCheck,
   Lock,
   ChevronRight,
+  Zap,
 } from 'lucide-react';
 
 interface NavItemDef {
@@ -107,24 +107,28 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* ── Header: logo ────────────────────────────────────────────── */}
       <div
-        className={`flex items-center justify-center border-b shrink-0 ${
-          collapsed ? 'py-3' : 'py-4'
+        className={`flex items-center border-b shrink-0 px-4 py-4 ${
+          collapsed ? 'justify-center' : ''
         }`}
         style={{ borderColor: 'var(--sidebar-border)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {collapsed ? (
-          <img
-            src={dbLogo}
-            alt="DB Logo"
-            style={{ width: 40, height: 40, objectFit: 'contain', display: 'block' }}
-          />
-        ) : (
-          <img
-            src={dbLogo}
-            alt="DB Logo"
-            style={{ width: 120, height: 120, objectFit: 'contain', display: 'block' }}
-          />
+        <div
+          className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0"
+          style={{ backgroundColor: 'var(--sidebar-primary)' }}
+        >
+          <Zap size={18} color="#fff" />
+        </div>
+
+        {!collapsed && (
+          <div className="ml-3">
+            <div style={{ color: '#F1F5F9', fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
+              FleetAdmin
+            </div>
+            <div style={{ color: 'var(--sidebar-foreground)', fontSize: '0.7rem', opacity: 0.6 }}>
+              Super Admin
+            </div>
+          </div>
         )}
       </div>
 
