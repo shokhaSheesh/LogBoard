@@ -116,14 +116,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <img
             src="/db-logo.png"
             alt="DB Logo"
-            className="w-8 h-8 object-contain"
+            style={{ width: 32, height: 32, objectFit: 'contain', display: 'block' }}
           />
         ) : (
           <img
             src="/db-logo.png"
             alt="DB Logo"
-            className="h-9 object-contain"
-            style={{ maxWidth: 160 }}
+            style={{ height: 40, width: 'auto', maxWidth: 180, display: 'block' }}
           />
         )}
       </div>
