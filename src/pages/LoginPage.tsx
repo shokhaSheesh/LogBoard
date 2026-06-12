@@ -1,41 +1,48 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Eye, EyeOff, Truck } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Truck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [login, setLogin] = useState('');
+
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!login || !password) {
-      setError('Please enter your login and password.');
+
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter your email and password.');
       return;
     }
-    setLoading(true);
+
+    setIsLoading(true);
     setTimeout(() => {
-      setLoading(false);
+      setIsLoading(false);
       navigate('/admin/dashboard');
-    }, 900);
+    }, 1000);
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      {/* Left: form half */}
-      <div
-        className="flex flex-col justify-center items-center w-1/2 px-16"
-        style={{ backgroundColor: '#0F172A' }}
-      >
+    <div className="flex h-screen w-full overflow-hidden">
+
+      {/* ── Left: Form ───────────────────────────────────────────────── */}
+      <div className="flex flex-col justify-center items-center w-1/2 bg-white px-16">
         <div className="w-full max-w-md">
+
           {/* Logo */}
           <div className="flex items-center gap-3 mb-10">
             <div
-              className="flex items-center justify-center rounded-xl"
+              className="flex items-center justify-center rounded-xl shrink-0"
               style={{
                 width: 44,
                 height: 44,
@@ -45,109 +52,115 @@ export default function LoginPage() {
               <Truck size={22} color="#fff" />
             </div>
             <div>
-              <div style={{ color: '#F8FAFC', fontSize: '1.1rem', fontWeight: 700, lineHeight: 1.2 }}>
+              <p style={{ color: '#111827', fontSize: '1.1rem', fontWeight: 700, lineHeight: 1.2 }}>
                 FleetAdmin
-              </div>
-              <div style={{ color: '#64748B', fontSize: '0.72rem', fontWeight: 500, letterSpacing: '0.05em' }}>
-                SUPER ADMIN PORTAL
-              </div>
+              </p>
+              <p style={{ color: '#9CA3AF', fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Super Admin Portal
+              </p>
             </div>
           </div>
 
           {/* Heading */}
           <div className="mb-8">
-            <h1 style={{ color: '#F8FAFC', fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2, marginBottom: 6 }}>
+            <h1 style={{ color: '#111827', fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.25, marginBottom: 8 }}>
               Welcome back
             </h1>
-            <p style={{ color: '#64748B', fontSize: '0.875rem' }}>
+            <p style={{ color: '#6B7280', fontSize: '0.9rem', lineHeight: 1.5 }}>
               Sign in to your admin account to continue.
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            {/* Login field */}
-            <div className="flex flex-col gap-1.5">
-              <label style={{ color: '#94A3B8', fontSize: '0.8rem', fontWeight: 500, letterSpacing: '0.03em' }}>
-                Login
-              </label>
-              <input
-                type="text"
-                autoComplete="username"
+
+            {/* Email */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email" style={{ color: '#374151', fontSize: '0.82rem' }}>
+                Email address
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
                 placeholder="admin@company.com"
-                value={login}
-                onChange={(e) => setLogin(e.target.value)}
-                style={{
-                  backgroundColor: '#1E293B',
-                  border: '1px solid #334155',
-                  borderRadius: 10,
-                  color: '#F1F5F9',
-                  fontSize: '0.875rem',
-                  padding: '11px 14px',
-                  outline: 'none',
-                  transition: 'border-color 0.15s',
-                }}
-                onFocus={(e) => (e.target.style.borderColor = '#3B82F6')}
-                onBlur={(e) => (e.target.style.borderColor = '#334155')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                style={{ height: 42, fontSize: '0.875rem' }}
               />
             </div>
 
-            {/* Password field */}
-            <div className="flex flex-col gap-1.5">
-              <label style={{ color: '#94A3B8', fontSize: '0.8rem', fontWeight: 500, letterSpacing: '0.03em' }}>
-                Password
-              </label>
+            {/* Password */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" style={{ color: '#374151', fontSize: '0.82rem' }}>
+                  Password
+                </Label>
+                <button
+                  type="button"
+                  style={{
+                    color: '#2563EB',
+                    fontSize: '0.78rem',
+                    fontWeight: 500,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative">
-                <input
+                <Input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  style={{
-                    backgroundColor: '#1E293B',
-                    border: '1px solid #334155',
-                    borderRadius: 10,
-                    color: '#F1F5F9',
-                    fontSize: '0.875rem',
-                    padding: '11px 42px 11px 14px',
-                    outline: 'none',
-                    width: '100%',
-                    transition: 'border-color 0.15s',
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = '#3B82F6')}
-                  onBlur={(e) => (e.target.style.borderColor = '#334155')}
+                  disabled={isLoading}
+                  className="pr-10"
+                  style={{ height: 42, fontSize: '0.875rem' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: '#64748B', background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  tabIndex={-1}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' }}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            {/* Forgot password */}
-            <div className="flex justify-end" style={{ marginTop: -8 }}>
-              <button
-                type="button"
-                style={{ color: '#3B82F6', fontSize: '0.8rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            {/* Remember me */}
+            <div className="flex items-center gap-2.5">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(v) => setRememberMe(v === true)}
+                disabled={isLoading}
+              />
+              <Label
+                htmlFor="remember"
+                style={{ color: '#6B7280', fontSize: '0.82rem', fontWeight: 400, cursor: 'pointer' }}
               >
-                Forgot password?
-              </button>
+                Remember me for 30 days
+              </Label>
             </div>
 
             {/* Error */}
             {error && (
               <div
                 style={{
-                  backgroundColor: '#450A0A',
-                  border: '1px solid #7F1D1D',
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA',
                   borderRadius: 8,
-                  color: '#FCA5A5',
-                  fontSize: '0.8rem',
+                  color: '#DC2626',
+                  fontSize: '0.82rem',
                   padding: '9px 12px',
                 }}
               >
@@ -156,91 +169,100 @@ export default function LoginPage() {
             )}
 
             {/* Submit */}
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              style={{
-                background: loading ? '#1D4ED8' : 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-                border: 'none',
-                borderRadius: 10,
-                color: '#fff',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                padding: '12px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.8 : 1,
-                marginTop: 4,
-                transition: 'opacity 0.15s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
+              disabled={isLoading}
+              className="w-full h-11 text-sm font-semibold rounded-xl mt-1"
+              style={{ fontSize: '0.9rem' }}
             >
-              {loading ? (
+              {isLoading ? (
                 <>
-                  <span
-                    style={{
-                      width: 16,
-                      height: 16,
-                      border: '2px solid rgba(255,255,255,0.3)',
-                      borderTopColor: '#fff',
-                      borderRadius: '50%',
-                      display: 'inline-block',
-                      animation: 'spin 0.7s linear infinite',
-                    }}
-                  />
+                  <Loader2 size={16} className="animate-spin" />
                   Signing in…
                 </>
               ) : (
                 'Sign in'
               )}
-            </button>
+            </Button>
           </form>
 
           {/* Footer */}
-          <p style={{ color: '#334155', fontSize: '0.75rem', textAlign: 'center', marginTop: 32 }}>
+          <p style={{ color: '#D1D5DB', fontSize: '0.75rem', textAlign: 'center', marginTop: 36 }}>
             © 2026 FleetAdmin. All rights reserved.
           </p>
         </div>
       </div>
 
-      {/* Right: image half */}
+      {/* ── Right: Branded graphic ────────────────────────────────────── */}
       <div className="relative w-1/2 overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1485575301924-6891ef935dcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cnVja2luZyUyMGxvZ2lzdGljcyUyMGhpZ2h3YXklMjB0cnVjayUyMGRhcmslMjBkcmFtYXRpY3xlbnwxfHx8fDE3ODEyNjg0MTh8MA&ixlib=rb-4.1.0&q=80&w=1080"
           alt="Trucking logistics"
           className="w-full h-full object-cover"
         />
+
+        {/* Gradient overlay */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(to right, rgba(15,23,42,0.55) 0%, rgba(15,23,42,0.1) 60%, rgba(15,23,42,0.0) 100%)',
+              'linear-gradient(to bottom, rgba(15,23,42,0.3) 0%, rgba(15,23,42,0.15) 50%, rgba(15,23,42,0.65) 100%)',
           }}
         />
-        <div className="absolute bottom-10 left-10 right-10">
+
+        {/* Top-left brand mark */}
+        <div className="absolute top-8 left-8 flex items-center gap-2.5">
+          <div
+            className="flex items-center justify-center rounded-lg"
+            style={{ width: 34, height: 34, background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)' }}
+          >
+            <Truck size={17} color="#fff" />
+          </div>
+          <span style={{ color: '#F8FAFC', fontSize: '0.95rem', fontWeight: 700, letterSpacing: '-0.01em' }}>
+            FleetAdmin
+          </span>
+        </div>
+
+        {/* Bottom quote card */}
+        <div className="absolute bottom-10 left-8 right-8">
           <div
             style={{
               backgroundColor: 'rgba(15,23,42,0.72)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+              border: '1px solid rgba(255,255,255,0.09)',
               borderRadius: 14,
               padding: '20px 24px',
-              maxWidth: 360,
+              maxWidth: 380,
             }}
           >
-            <div style={{ color: '#F1F5F9', fontSize: '1rem', fontWeight: 600, lineHeight: 1.4, marginBottom: 6 }}>
+            <p style={{ color: '#F1F5F9', fontSize: '1rem', fontWeight: 600, lineHeight: 1.45, marginBottom: 8 }}>
               Manage your fleet with confidence
-            </div>
-            <div style={{ color: '#94A3B8', fontSize: '0.8rem', lineHeight: 1.5 }}>
+            </p>
+            <p style={{ color: '#94A3B8', fontSize: '0.82rem', lineHeight: 1.55 }}>
               Oversee companies, drivers, and loads across every route — all from one powerful dashboard.
+            </p>
+
+            {/* Stats row */}
+            <div
+              className="flex items-center gap-5 mt-5 pt-4"
+              style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              {[
+                { value: '1,200+', label: 'Companies' },
+                { value: '9,000+', label: 'Active Drivers' },
+                { value: '60k+',   label: 'Monthly Loads' },
+              ].map((s) => (
+                <div key={s.label}>
+                  <p style={{ color: '#F1F5F9', fontSize: '1rem', fontWeight: 700, lineHeight: 1 }}>{s.value}</p>
+                  <p style={{ color: '#64748B', fontSize: '0.72rem', marginTop: 3 }}>{s.label}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
