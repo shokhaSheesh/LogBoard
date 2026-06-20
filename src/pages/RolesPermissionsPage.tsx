@@ -1,75 +1,34 @@
-import { useState } from 'react';
-import { Plus, Shield, Save, Trash2, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Shield, Save, Trash2, X, Loader2 } from 'lucide-react';
+import { api, ApiException } from '@/lib/api';
+import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Action = 'read' | 'create' | 'update' | 'delete';
-type PermKey = `${string}.${Action}`;
+type Action = string;
+type PermKey = string;
 
 interface Role {
   id: string;
   name: string;
   description: string;
   permissions: Set<PermKey>;
+  system: boolean;
 }
 
-interface PermCategory {
+interface ApiRole {
   id: string;
-  label: string;
+  name: string;
+  description: string;
+  permissions: string[];
+  system: boolean;
 }
 
-// ── Schema ────────────────────────────────────────────────────────────────────
-
-const ACTIONS: Action[] = ['read', 'create', 'update', 'delete'];
-
-const CATEGORIES: PermCategory[] = [
-  { id: 'companies',     label: 'Companies' },
-  { id: 'subscriptions', label: 'Subscriptions' },
-  { id: 'board_users',   label: 'Board Users' },
-  { id: 'admin_users',   label: 'Admin Users' },
-  { id: 'roles',         label: 'Roles & Permissions' },
-];
-
-const ALL_KEYS: PermKey[] = CATEGORIES.flatMap(c =>
-  ACTIONS.map(a => `${c.id}.${a}` as PermKey)
-);
-
-function readKeys(): PermKey[] {
-  return CATEGORIES.map(c => `${c.id}.read` as PermKey);
+interface ApiCatalog {
+  modules: { id: string; label: string }[];
+  actions: Action[];
+  permissions: string[];
 }
-
-// ── Seed Roles ────────────────────────────────────────────────────────────────
-
-const SEED_ROLES: Role[] = [
-  {
-    id: 'super_admin', name: 'Super Admin',
-    description: 'Full unrestricted access to all modules.',
-    permissions: new Set(ALL_KEYS),
-  },
-  {
-    id: 'admin', name: 'Admin',
-    description: 'Full access except role and admin user deletion.',
-    permissions: new Set(ALL_KEYS.filter(k => !['roles.delete', 'admin_users.delete'].includes(k))),
-  },
-  {
-    id: 'support', name: 'Support',
-    description: 'Read-only access across all modules.',
-    permissions: new Set(readKeys()),
-  },
-  {
-    id: 'billing', name: 'Billing',
-    description: 'Full access to subscriptions; read-only elsewhere.',
-    permissions: new Set([
-      ...readKeys(),
-      'subscriptions.create', 'subscriptions.update', 'subscriptions.delete',
-    ] as PermKey[]),
-  },
-  {
-    id: 'readonly', name: 'Read-Only',
-    description: 'View-only. No write access anywhere.',
-    permissions: new Set(readKeys()),
-  },
-];
 
 // ── Toggle Switch ─────────────────────────────────────────────────────────────
 
@@ -105,10 +64,12 @@ function AddRoleModal({
   onSave,
 }: {
   onClose: () => void;
-  onSave: (name: string, description: string) => void;
+  onSave: (name: string, description: string) => Promise<void>;
 }) {
-  const [name, setName]     = useState('');
-  const [desc, setDesc]     = useState('');
+  const [name, setName]           = useState('');
+  const [desc, setDesc]           = useState('');
+  const [saving, setSaving]       = useState(false);
+  const [serverError, setServerError] = useState('');
 
   const inputStyle: React.CSSProperties = {
     width: '100%', height: 38, padding: '0 11px', borderRadius: 8,
@@ -117,9 +78,35 @@ function AddRoleModal({
     boxSizing: 'border-box',
   };
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    setServerError('');
+    try {
+      await onSave(name.trim(), desc.trim());
+    } catch (err) {
+      if (err instanceof ApiException) {
+        if (err.code === 'conflict') {
+          setServerError('A role with this name already exists.');
+        } else if (err.code === 'invalid_name') {
+          setServerError('Role name is invalid.');
+        } else {
+          setServerError(err.message || 'Something went wrong.');
+        }
+      } else {
+        setServerError('Unable to connect to the server.');
+      }
+      setSaving(false);
+    }
+  }
+
   return (
     <>
-      <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 40 }} onClick={onClose} />
+      <div
+        style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 40 }}
+        onClick={saving ? undefined : onClose}
+      />
       <div
         style={{
           position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
@@ -133,19 +120,17 @@ function AddRoleModal({
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--foreground)' }}>Add New Role</h2>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted-foreground)', padding: 4, display: 'flex', borderRadius: 6 }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            disabled={saving}
+            style={{ background: 'none', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', color: 'var(--muted-foreground)', padding: 4, display: 'flex', borderRadius: 6, opacity: saving ? 0.5 : 1 }}
+            onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
           >
             <X size={17} />
           </button>
         </div>
 
         {/* Body */}
-        <form
-          onSubmit={e => { e.preventDefault(); if (name.trim()) onSave(name.trim(), desc.trim()); }}
-          style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}
-        >
+        <form onSubmit={handleSubmit} style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 5 }}>
               Role Name
@@ -157,6 +142,7 @@ function AddRoleModal({
               style={inputStyle}
               autoFocus
               required
+              disabled={saving}
             />
           </div>
           <div>
@@ -168,32 +154,45 @@ function AddRoleModal({
               onChange={e => setDesc(e.target.value)}
               placeholder="Short description of this role"
               style={inputStyle}
+              disabled={saving}
             />
           </div>
+
+          {serverError && (
+            <div style={{ backgroundColor: 'var(--destructive-subtle, #FEF2F2)', border: '1px solid var(--destructive-border, #FECACA)', borderRadius: 8, color: '#DC2626', fontSize: '0.8rem', padding: '8px 12px' }}>
+              {serverError}
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
             <button
               type="button"
               onClick={onClose}
+              disabled={saving}
               style={{
-                flex: 1, height: 38, borderRadius: 8, cursor: 'pointer',
+                flex: 1, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer',
                 backgroundColor: 'var(--background)', border: '1px solid var(--border)',
                 color: 'var(--foreground)', fontSize: '0.83rem', fontWeight: 500,
+                opacity: saving ? 0.6 : 1,
               }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}
+              onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--background)'; }}
             >
               Cancel
             </button>
             <button
               type="submit"
+              disabled={saving}
               style={{
-                flex: 2, height: 38, borderRadius: 8, cursor: 'pointer',
-                background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
-                border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600,
+                flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer',
+                background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff',
+                fontSize: '0.83rem', fontWeight: 600,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}
             >
-              Create Role
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              {saving ? 'Creating…' : 'Create Role'}
             </button>
           </div>
         </form>
@@ -205,11 +204,52 @@ function AddRoleModal({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RolesPermissionsPage() {
-  const [roles, setRoles]           = useState<Role[]>(SEED_ROLES);
-  const [selectedId, setSelectedId] = useState('support');
+  const [roles, setRoles]           = useState<Role[]>([]);
+  const [catalog, setCatalog]       = useState<ApiCatalog | null>(null);
+  const [isLoading, setIsLoading]   = useState(true);
+  const [loadError, setLoadError]   = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState('');
   const [dirty, setDirty]           = useState(false);
   const [addOpen, setAddOpen]       = useState(false);
+  const [saving, setSaving]         = useState(false);
+  const [saveError, setSaveError]   = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
+  const [deleting, setDeleting]         = useState(false);
+  const [deleteError, setDeleteError]   = useState<string | null>(null);
 
+  // Keep a snapshot of server state for Reset
+  const serverRolesRef = useRef<Role[]>([]);
+
+  function toUIRole(r: ApiRole): Role {
+    return { ...r, permissions: new Set(r.permissions) };
+  }
+
+  const fetchAll = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const [cat, roleList] = await Promise.all([
+        api.get<ApiCatalog>('/roles/permissions'),
+        api.get<ApiRole[]>('/roles'),
+      ]);
+      setCatalog(cat);
+      const uiRoles = roleList.map(toUIRole);
+      serverRolesRef.current = uiRoles;
+      setRoles(uiRoles);
+      setSelectedId(uiRoles[0]?.id ?? '');
+    } catch (err) {
+      setLoadError(err instanceof ApiException ? err.message : 'Failed to load roles.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const modules = catalog?.modules ?? [];
+  const actions = catalog?.actions ?? [];
+
+  const allKeys: PermKey[] = modules.flatMap(m => actions.map(a => `${m.id}.${a}`));
   const selected = roles.find(r => r.id === selectedId) ?? roles[0];
 
   function toggle(key: PermKey) {
@@ -220,10 +260,11 @@ export default function RolesPermissionsPage() {
       return { ...r, permissions: p };
     }));
     setDirty(true);
+    setSaveError(null);
   }
 
-  function toggleRow(catId: string) {
-    const rowKeys = ACTIONS.map(a => `${catId}.${a}` as PermKey);
+  function toggleRow(moduleId: string) {
+    const rowKeys = actions.map(a => `${moduleId}.${a}`);
     const allOn   = rowKeys.every(k => selected.permissions.has(k));
     setRoles(prev => prev.map(r => {
       if (r.id !== selectedId) return r;
@@ -232,44 +273,101 @@ export default function RolesPermissionsPage() {
       return { ...r, permissions: p };
     }));
     setDirty(true);
+    setSaveError(null);
   }
 
   function toggleAll() {
-    const allOn = ALL_KEYS.every(k => selected.permissions.has(k));
+    const allOn = allKeys.every(k => selected.permissions.has(k));
     setRoles(prev => prev.map(r => {
       if (r.id !== selectedId) return r;
-      return { ...r, permissions: allOn ? new Set() : new Set(ALL_KEYS) };
+      return { ...r, permissions: allOn ? new Set() : new Set(allKeys) };
     }));
     setDirty(true);
+    setSaveError(null);
   }
 
   function selectRole(id: string) {
     setSelectedId(id);
     setDirty(false);
+    setSaveError(null);
   }
 
-  function deleteRole(id: string) {
-    const remaining = roles.filter(r => r.id !== id);
-    setRoles(remaining);
-    if (selectedId === id) setSelectedId(remaining[0]?.id ?? '');
+  function resetChanges() {
+    const original = serverRolesRef.current.find(r => r.id === selectedId);
+    if (!original) return;
+    setRoles(prev => prev.map(r => r.id === selectedId ? { ...original, permissions: new Set(original.permissions) } : r));
     setDirty(false);
+    setSaveError(null);
   }
 
-  function addRole(name: string, description: string) {
-    const newRole: Role = {
-      id: `role_${Date.now()}`,
-      name,
-      description: description || `Custom role: ${name}`,
-      permissions: new Set(),
-    };
-    setRoles(p => [...p, newRole]);
-    setSelectedId(newRole.id);
+  async function saveChanges() {
+    if (!selected || !dirty) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const updated = await api.put<ApiRole>(`/roles/${selected.id}`, {
+        name: selected.name,
+        description: selected.description,
+        permissions: [...selected.permissions],
+      });
+      const uiUpdated = toUIRole(updated);
+      setRoles(prev => prev.map(r => r.id === selected.id ? uiUpdated : r));
+      serverRolesRef.current = serverRolesRef.current.map(r => r.id === selected.id ? uiUpdated : r);
+      setDirty(false);
+    } catch (err) {
+      if (err instanceof ApiException) {
+        if (err.code === 'invalid_permission') {
+          setSaveError('One or more permissions are invalid.');
+        } else if (err.code === 'system_role') {
+          setSaveError('System roles cannot be modified.');
+        } else {
+          setSaveError(err.message || 'Failed to save changes.');
+        }
+      } else {
+        setSaveError('Unable to connect to the server.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleAddRole(name: string, description: string): Promise<void> {
+    const created = await api.post<ApiRole>('/roles', { name, description, permissions: [] });
+    const uiRole = toUIRole(created);
+    setRoles(p => [...p, uiRole]);
+    serverRolesRef.current = [...serverRolesRef.current, uiRole];
+    setSelectedId(uiRole.id);
+    setDirty(false);
     setAddOpen(false);
-    setDirty(false);
   }
 
-  const allOn  = ALL_KEYS.every(k => selected.permissions.has(k));
-  const COL_W  = 88;
+  async function handleDeleteRole() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await api.delete(`/roles/${deleteTarget.id}`);
+      const remaining = roles.filter(r => r.id !== deleteTarget.id);
+      serverRolesRef.current = serverRolesRef.current.filter(r => r.id !== deleteTarget.id);
+      setRoles(remaining);
+      if (selectedId === deleteTarget.id) {
+        setSelectedId(remaining[0]?.id ?? '');
+        setDirty(false);
+      }
+      setDeleteTarget(null);
+    } catch (err) {
+      if (err instanceof ApiException) {
+        setDeleteError(err.message || 'Failed to delete role.');
+      } else {
+        setDeleteError('Unable to connect to the server.');
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const allOn = allKeys.length > 0 && allKeys.every(k => selected?.permissions.has(k));
+  const COL_W = 88;
 
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
@@ -284,206 +382,275 @@ export default function RolesPermissionsPage() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20, alignItems: 'start' }}>
-
-        {/* ── Left: Roles List ──────────────────────────────────────── */}
-        <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--foreground)' }}>Roles</span>
-          </div>
-
-          <ul style={{ listStyle: 'none', padding: '6px 0', margin: 0 }}>
-            {roles.map(role => {
-              const active = role.id === selectedId;
-              return (
-                <li key={role.id} style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => selectRole(role.id)}
-                    style={{
-                      width: '100%', textAlign: 'left', padding: '10px 40px 10px 16px',
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      borderLeft: `3px solid ${active ? '#2563EB' : 'transparent'}`,
-                      backgroundColor: active ? '#EFF6FF' : 'transparent',
-                      display: 'flex', alignItems: 'center', gap: 10,
-                    }}
-                    onMouseEnter={e => { if (!active) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                  >
-                    <Shield size={15} style={{ flexShrink: 0, color: active ? '#2563EB' : 'var(--muted-foreground)' }} />
-                    <div>
-                      <div style={{ fontSize: '0.83rem', fontWeight: active ? 600 : 400, color: active ? '#1D4ED8' : 'var(--foreground)', lineHeight: 1.3 }}>
-                        {role.name}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginTop: 1 }}>
-                        {role.permissions.size} permission{role.permissions.size !== 1 ? 's' : ''}
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Delete button */}
-                  <button
-                    onClick={e => { e.stopPropagation(); deleteRole(role.id); }}
-                    title="Delete role"
-                    style={{
-                      position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer', padding: 5, borderRadius: 6,
-                      color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center',
-                      opacity: 0.5,
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.backgroundColor = '#FEF2F2'; }}
-                    onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = 'var(--muted-foreground)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-
-          <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border)' }}>
-            <button
-              onClick={() => setAddOpen(true)}
-              style={{
-                width: '100%', padding: '8px 12px', borderRadius: 8,
-                background: 'none', border: 'none', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: '0.78rem', fontWeight: 500, color: 'var(--muted-foreground)',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              <Plus size={14} />
-              Add New Role
-            </button>
-          </div>
+      {/* ── Loading / Error states ────────────────────────────────────── */}
+      {isLoading && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted-foreground)', fontSize: '0.85rem', padding: '48px 0', justifyContent: 'center' }}>
+          <Loader2 size={18} className="animate-spin" />
+          Loading roles…
         </div>
+      )}
 
-        {/* ── Right: Matrix ─────────────────────────────────────────── */}
-        <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {!isLoading && loadError && (
+        <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '16px 20px', color: '#DC2626', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+          {loadError}
+          <button
+            onClick={fetchAll}
+            style={{ marginLeft: 'auto', fontSize: '0.8rem', fontWeight: 600, color: '#DC2626', background: 'none', border: '1px solid #FECACA', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
-          {/* Role header */}
-          <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--foreground)' }}>
-                  Editing: {selected.name} Role
-                </span>
-                {dirty && (
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.04em', backgroundColor: '#FEF9C3', color: '#854D0E', border: '1px solid #FDE68A', padding: '2px 7px', borderRadius: 99 }}>
-                    UNSAVED
-                  </span>
-                )}
-              </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', margin: 0 }}>
-                {selected.description}
-              </p>
+      {!isLoading && !loadError && selected && (
+        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20, alignItems: 'start' }}>
+
+          {/* ── Left: Roles List ──────────────────────────────────────── */}
+          <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--foreground)' }}>Roles</span>
             </div>
 
-            {/* Global select all */}
-            <button
-              onClick={toggleAll}
-              style={{
-                padding: '6px 14px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
-                backgroundColor: allOn ? '#EFF6FF' : 'var(--background)',
-                border: `1px solid ${allOn ? '#93C5FD' : 'var(--border)'}`,
-                color: allOn ? '#2563EB' : 'var(--foreground)',
-                fontSize: '0.78rem', fontWeight: 600,
-              }}
-            >
-              {allOn ? 'Deselect All' : 'Select All'}
-            </button>
+            <ul style={{ listStyle: 'none', padding: '6px 0', margin: 0 }}>
+              {roles.map(role => {
+                const active = role.id === selectedId;
+                return (
+                  <li key={role.id} style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => selectRole(role.id)}
+                      style={{
+                        width: '100%', textAlign: 'left',
+                        padding: role.system ? '10px 16px' : '10px 40px 10px 16px',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        borderLeft: `3px solid ${active ? '#2563EB' : 'transparent'}`,
+                        backgroundColor: active ? '#EFF6FF' : 'transparent',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                      }}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
+                      onMouseLeave={e => { if (!active) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >
+                      <Shield size={15} style={{ flexShrink: 0, color: active ? '#2563EB' : 'var(--muted-foreground)' }} />
+                      <div>
+                        <div style={{ fontSize: '0.83rem', fontWeight: active ? 600 : 400, color: active ? '#1D4ED8' : 'var(--foreground)', lineHeight: 1.3 }}>
+                          {role.name}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginTop: 1 }}>
+                          {role.permissions.size} permission{role.permissions.size !== 1 ? 's' : ''}
+                          {role.system && <span style={{ marginLeft: 4, color: '#9CA3AF' }}>· system</span>}
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Delete button — only for non-system roles */}
+                    {!role.system && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setDeleteTarget(role); }}
+                        title="Delete role"
+                        style={{
+                          position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                          background: 'none', border: 'none', cursor: 'pointer', padding: 5, borderRadius: 6,
+                          color: 'var(--muted-foreground)', display: 'flex', alignItems: 'center',
+                          opacity: 0.5,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.backgroundColor = '#FEF2F2'; }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = 'var(--muted-foreground)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border)' }}>
+              <button
+                onClick={() => setAddOpen(true)}
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: 8,
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  fontSize: '0.78rem', fontWeight: 500, color: 'var(--muted-foreground)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <Plus size={14} />
+                Add New Role
+              </button>
+            </div>
           </div>
 
-          {/* Matrix table */}
-          <div style={{ overflowX: 'auto', flex: 1 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '10px 22px', textAlign: 'left', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
-                    Module
-                  </th>
-                  {ACTIONS.map(a => (
-                    <th key={a} style={{ width: COL_W, padding: '10px 0', textAlign: 'center', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
-                      {a.charAt(0).toUpperCase() + a.slice(1)}
-                    </th>
-                  ))}
-                  {/* Row select-all column */}
-                  <th style={{ width: 80, padding: '10px 16px 10px 0', textAlign: 'center', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
-                    All
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {CATEGORIES.map((cat, ci) => {
-                  const rowKeys = ACTIONS.map(a => `${cat.id}.${a}` as PermKey);
-                  const rowAllOn = rowKeys.every(k => selected.permissions.has(k));
+          {/* ── Right: Matrix ─────────────────────────────────────────── */}
+          <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-                  return (
-                    <tr
-                      key={cat.id}
-                      style={{ borderBottom: ci < CATEGORIES.length - 1 ? '1px solid var(--border)' : 'none' }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    >
-                      <td style={{ padding: '16px 22px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)' }}>
-                        {cat.label}
-                      </td>
-                      {ACTIONS.map(action => {
-                        const key = `${cat.id}.${action}` as PermKey;
-                        return (
-                          <td key={action} style={{ width: COL_W, textAlign: 'center', padding: '16px 0' }}>
+            {/* Role header */}
+            <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--foreground)' }}>
+                    Editing: {selected.name} Role
+                  </span>
+                  {dirty && (
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.04em', backgroundColor: '#FEF9C3', color: '#854D0E', border: '1px solid #FDE68A', padding: '2px 7px', borderRadius: 99 }}>
+                      UNSAVED
+                    </span>
+                  )}
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', margin: 0 }}>
+                  {selected.description || 'No description.'}
+                </p>
+              </div>
+
+              {/* Global select all */}
+              {!selected.system && (
+                <button
+                  onClick={toggleAll}
+                  style={{
+                    padding: '6px 14px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
+                    backgroundColor: allOn ? '#EFF6FF' : 'var(--background)',
+                    border: `1px solid ${allOn ? '#93C5FD' : 'var(--border)'}`,
+                    color: allOn ? '#2563EB' : 'var(--foreground)',
+                    fontSize: '0.78rem', fontWeight: 600,
+                  }}
+                >
+                  {allOn ? 'Deselect All' : 'Select All'}
+                </button>
+              )}
+            </div>
+
+            {/* Matrix table */}
+            <div style={{ overflowX: 'auto', flex: 1 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '10px 22px', textAlign: 'left', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
+                      Module
+                    </th>
+                    {actions.map(a => (
+                      <th key={a} style={{ width: COL_W, padding: '10px 0', textAlign: 'center', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
+                        {a.charAt(0).toUpperCase() + a.slice(1)}
+                      </th>
+                    ))}
+                    {/* Row select-all column — only when editable */}
+                    {!selected.system && (
+                      <th style={{ width: 80, padding: '10px 16px 10px 0', textAlign: 'center', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
+                        All
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {modules.map((mod, ci) => {
+                    const rowKeys  = actions.map(a => `${mod.id}.${a}`);
+                    const rowAllOn = rowKeys.every(k => selected.permissions.has(k));
+
+                    return (
+                      <tr
+                        key={mod.id}
+                        style={{ borderBottom: ci < modules.length - 1 ? '1px solid var(--border)' : 'none' }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <td style={{ padding: '16px 22px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)' }}>
+                          {mod.label}
+                        </td>
+                        {actions.map(action => {
+                          const key = `${mod.id}.${action}`;
+                          return (
+                            <td key={action} style={{ width: COL_W, textAlign: 'center', padding: '16px 0' }}>
+                              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                <Toggle
+                                  checked={selected.permissions.has(key)}
+                                  onChange={selected.system ? () => {} : () => toggle(key)}
+                                />
+                              </div>
+                            </td>
+                          );
+                        })}
+                        {!selected.system && (
+                          <td style={{ width: 80, textAlign: 'center', padding: '16px 16px 16px 0' }}>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
-                              <Toggle checked={selected.permissions.has(key)} onChange={() => toggle(key)} />
+                              <Toggle checked={rowAllOn} onChange={() => toggleRow(mod.id)} />
                             </div>
                           </td>
-                        );
-                      })}
-                      {/* Row toggle-all */}
-                      <td style={{ width: 80, textAlign: 'center', padding: '16px 16px 16px 0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
-                          <Toggle checked={rowAllOn} onChange={() => toggleRow(cat.id)} />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-          {/* Footer */}
-          <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8, backgroundColor: 'var(--card)', position: 'sticky', bottom: 0 }}>
-            <button
-              onClick={() => { setRoles(SEED_ROLES); setDirty(false); }}
-              style={{
-                padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
-                backgroundColor: 'var(--background)', border: '1px solid var(--border)',
-                color: 'var(--foreground)', fontSize: '0.82rem', fontWeight: 500,
-              }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => setDirty(false)}
-              disabled={!dirty}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 18px', borderRadius: 8, cursor: dirty ? 'pointer' : 'default',
-                background: dirty ? 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' : 'var(--muted)',
-                border: 'none', color: dirty ? '#fff' : 'var(--muted-foreground)',
-                fontSize: '0.82rem', fontWeight: 600, transition: 'background 0.2s',
-              }}
-            >
-              <Save size={14} />
-              Save Changes
-            </button>
+            {/* Footer */}
+            <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, backgroundColor: 'var(--card)', position: 'sticky', bottom: 0 }}>
+              {saveError && (
+                <span style={{ fontSize: '0.78rem', color: '#DC2626', marginRight: 'auto' }}>{saveError}</span>
+              )}
+              {!selected.system && (
+                <>
+                  <button
+                    onClick={resetChanges}
+                    disabled={!dirty || saving}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, cursor: dirty && !saving ? 'pointer' : 'default',
+                      backgroundColor: 'var(--background)', border: '1px solid var(--border)',
+                      color: 'var(--foreground)', fontSize: '0.82rem', fontWeight: 500,
+                      opacity: !dirty || saving ? 0.5 : 1,
+                    }}
+                    onMouseEnter={e => { if (dirty && !saving) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--background)'; }}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    onClick={saveChanges}
+                    disabled={!dirty || saving}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '8px 18px', borderRadius: 8, cursor: dirty && !saving ? 'pointer' : 'default',
+                      background: dirty && !saving ? 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' : 'var(--muted)',
+                      border: 'none', color: dirty && !saving ? '#fff' : 'var(--muted-foreground)',
+                      fontSize: '0.82rem', fontWeight: 600, transition: 'background 0.2s',
+                    }}
+                  >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {saving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </>
+              )}
+              {selected.system && (
+                <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', fontStyle: 'italic' }}>
+                  System roles are read-only.
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {addOpen && <AddRoleModal onClose={() => setAddOpen(false)} onSave={addRole} />}
+      {addOpen && (
+        <AddRoleModal
+          onClose={() => setAddOpen(false)}
+          onSave={handleAddRole}
+        />
+      )}
+
+      {deleteTarget && (
+        <DeleteConfirmModal
+          title="Delete Role"
+          description={
+            <>
+              Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone and will affect all users assigned this role.
+            </>
+          }
+          confirmLabel="Yes, Delete"
+          onConfirm={handleDeleteRole}
+          onCancel={() => { setDeleteTarget(null); setDeleteError(null); }}
+          loading={deleting}
+          error={deleteError ?? undefined}
+        />
+      )}
     </div>
   );
 }

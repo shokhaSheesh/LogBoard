@@ -20,7 +20,7 @@ interface NavItemDef {
 
 const NAV_ITEMS: NavItemDef[] = [
   { path: '/admin/dashboard',         label: 'Dashboard',           icon: <LayoutDashboard size={18} /> },
-  { path: '/admin/companies',         label: 'Companies',           icon: <Building2 size={18} />,        badge: 3 },
+  { path: '/admin/companies',         label: 'Companies',           icon: <Building2 size={18} /> },
   { path: '/admin/subscriptions',     label: 'Subscriptions',       icon: <CreditCard size={18} /> },
   { path: '/admin/board-users',       label: 'Board Users',         icon: <Users size={18} /> },
   { path: '/admin/admin-users',       label: 'Admin Users',         icon: <ShieldCheck size={18} /> },

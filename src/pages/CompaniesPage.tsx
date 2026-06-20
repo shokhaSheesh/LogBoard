@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Search, Building2, CheckCircle2, Clock, XCircle,
-  MoreVertical, Plus, Download, Eye, EyeOff, Pencil, Trash2, X,
+  Plus, Download, Eye, Pencil, Trash2, X,
   Phone, Send, Shield, Camera, ChevronDown, ChevronLeft, ChevronRight, Loader2,
 } from 'lucide-react';
 import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
@@ -12,7 +12,6 @@ import { api, ApiException } from '@/lib/api';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Status = 'Active' | 'Pending' | 'Suspended';
-type Plan   = 'Enterprise' | 'Professional' | 'Starter' | 'Basic';
 
 interface ApiCompany {
   id: string;
@@ -21,9 +20,8 @@ interface ApiCompany {
   owner: string;
   owner_phone: string;
   owner_telegram: string;
-  login: string;
-  password: string;
-  plan: Plan;
+  owner_id: string;
+  plan: string;
   plan_expiry: string;
   eld: string;
   status: Status;
@@ -43,23 +41,39 @@ interface Company {
   ownerTelegram: string;
   ownerInitials: string;
   ownerColor: string;
-  login: string;
-  password: string;
-  plan: Plan;
+  plan: string;
   planExpiry: string;
   registeredDate: string;
   status: Status;
   eld: string;
 }
 
+interface FetchedPlan {
+  id: string;
+  name: string;
+  color: string;
+  duration: number;
+}
+
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const PLAN_STYLE: Record<Plan, { bg: string; color: string }> = {
-  Enterprise:   { bg: '#EFF6FF', color: '#2563EB' },
+const PLAN_ENUM = ['Basic', 'Starter', 'Professional', 'Enterprise'];
+
+const PLAN_STYLE: Record<string, { bg: string; color: string }> = {
+  Basic:        { bg: '#F0FDF4', color: '#15803D' },
+  Starter:      { bg: '#EFF6FF', color: '#2563EB' },
   Professional: { bg: '#F5F3FF', color: '#7C3AED' },
-  Starter:      { bg: '#ECFDF5', color: '#059669' },
-  Basic:        { bg: '#FFF7ED', color: '#C2410C' },
+  Enterprise:   { bg: '#FFF7ED', color: '#C2410C' },
 };
+const DEFAULT_PLAN_STYLE = { bg: '#F1F5F9', color: '#64748B' };
+
+function planStyle(planName: string, plans?: FetchedPlan[]) {
+  if (plans) {
+    const hex = plans.find(p => p.name === planName)?.color;
+    if (hex) return { bg: hex + '18', color: hex };
+  }
+  return PLAN_STYLE[planName] ?? DEFAULT_PLAN_STYLE;
+}
 
 const STATUS_CONFIG: Record<Status, { dot: string; color: string }> = {
   Active:    { dot: '#22C55E', color: '#15803D' },
@@ -80,7 +94,6 @@ const COLORS = ['#2563EB','#8B5CF6','#10B981','#F59E0B','#EC4899','#14B8A6','#63
 
 type TabId = 'all' | Status;
 const STATUS_OPTS: ('all' | Status)[] = ['all', 'Active', 'Pending', 'Suspended'];
-const PLAN_OPTS:   ('all' | Plan)[]   = ['all', 'Enterprise', 'Professional', 'Starter', 'Basic'];
 const ELD_OPTIONS = ['None', 'Samsara', 'Motive', 'Omnitracs', 'PeopleNet', 'KeepTruckin'];
 
 const PER_PAGE = 10;
@@ -108,25 +121,23 @@ function toUICompany(a: ApiCompany): Company {
     ownerTelegram: a.owner_telegram,
     ownerInitials,
     ownerColor: colorFromStr(a.id + '_owner'),
-    login: a.login, password: a.password,
     plan: a.plan, planExpiry,
     registeredDate, status: a.status, eld: a.eld,
   };
 }
 
-function toApiPayload(f: FormState, mode: 'create' | 'edit') {
-  const payload: Record<string, unknown> = {
-    mc: f.mc, name: f.name, owner: f.owner,
+function toApiPayload(f: FormState) {
+  return {
+    mc: f.mc,
+    name: f.name,
+    owner: f.owner,
     owner_phone: f.ownerPhone,
     owner_telegram: f.ownerTelegram,
-    login: f.login,
     plan: f.plan,
-    plan_expiry: f.planExpiry ? (() => { const d = new Date(f.planExpiry); return d.toISOString().split('T')[0] + 'T00:00:00Z'; })() : '',
+    plan_expiry: f.planExpiry ? new Date(f.planExpiry).toISOString().split('T')[0] + 'T00:00:00Z' : '',
     eld: f.eld,
     status: f.status,
   };
-  if (mode === 'create' || f.password) payload.password = f.password;
-  return payload;
 }
 
 // ── Tiny inline SVG icons ─────────────────────────────────────────────────────
@@ -512,12 +523,12 @@ function LogoUpload({ initials, logoColor, logo, onChange }: {
 
 // ── Detail modal ──────────────────────────────────────────────────────────────
 
-function CompanyDetailModal({ company, onClose, onLogoChange }: {
+function CompanyDetailModal({ company, plans, onClose, onLogoChange }: {
   company: Company;
+  plans: FetchedPlan[];
   onClose: () => void;
   onLogoChange: (logo: string) => void;
 }) {
-  const [showPass, setShowPass] = useState(false);
   const [logoHover, setLogoHover] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -529,7 +540,7 @@ function CompanyDetailModal({ company, onClose, onLogoChange }: {
     reader.readAsDataURL(file);
     e.target.value = '';
   }
-  const plan     = PLAN_STYLE[company.plan];
+  const plan     = planStyle(company.plan, plans);
   const status   = STATUS_CONFIG[company.status];
   const eldColor = ELD_COLOR[company.eld] ?? '#94A3B8';
 
@@ -613,26 +624,6 @@ function CompanyDetailModal({ company, onClose, onLogoChange }: {
           />
           <Row icon={<Phone size={14} />}        label="Owner Phone Number"  value={company.ownerPhone}   mono />
           <Row icon={<Send size={14} />}         label="Owner Telegram"      value={company.ownerTelegram} mono />
-          <Row icon={<Shield size={14} />}       label="Login"               value={company.login}         mono />
-          <Row
-            icon={<Eye size={14} />}
-            label="Password"
-            value={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontFamily: "'JetBrains Mono','Courier New',monospace" }}>
-                  {showPass ? company.password : '••••••••••'}
-                </span>
-                <button
-                  onClick={() => setShowPass((v) => !v)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted-foreground)', display: 'flex', padding: 2 }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--foreground)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted-foreground)'; }}
-                >
-                  {showPass ? <EyeOff size={13} /> : <Eye size={13} />}
-                </button>
-              </div>
-            }
-          />
           <Row
             icon={<CreditCardIcon />}
             label="Plan"
@@ -662,88 +653,23 @@ function CompanyDetailModal({ company, onClose, onLogoChange }: {
   );
 }
 
-// ── Row actions dropdown ──────────────────────────────────────────────────────
-
-function ActionsMenu({ company, onView, onEdit, onDelete }: {
-  company: Company;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative inline-block">
-      <button
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-        style={{ color: 'var(--muted-foreground)', backgroundColor: 'transparent' }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-      >
-        <MoreVertical size={16} />
-      </button>
-
-      {open && (
-        <div
-          className="absolute right-0 z-30 rounded-xl overflow-hidden py-1"
-          style={{ top: 'calc(100% + 4px)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.10)', minWidth: 160 }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {[
-            { icon: <Eye size={14} />,    label: 'View Details', color: 'var(--foreground)', action: onView },
-            { icon: <Pencil size={14} />, label: 'Edit Company', color: 'var(--foreground)', action: onEdit },
-          ].map(({ icon, label, color, action }) => (
-            <button key={label} onClick={() => { action(); setOpen(false); }}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2 transition-colors"
-              style={{ fontSize: '0.8rem', color, backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-            >
-              {icon} {label}
-            </button>
-          ))}
-          <div style={{ borderTop: '1px solid var(--border)', margin: '2px 0' }} />
-          <button onClick={() => { onDelete(); setOpen(false); }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2 transition-colors"
-            style={{ fontSize: '0.8rem', color: '#DC2626', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#FEF2F2'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-          >
-            <Trash2 size={14} /> Delete Company
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Company form modal (create / edit) ────────────────────────────────────────
 
 interface FormState {
   mc: string; name: string; owner: string; ownerPhone: string; ownerTelegram: string;
-  login: string; password: string; plan: Plan; planExpiry: string; eld: string; status: Status;
+  plan: string; planExpiry: string; eld: string; status: Status;
   logo: string;
 }
 const EMPTY_FORM: FormState = {
   mc: '', name: '', owner: '', ownerPhone: '', ownerTelegram: '',
-  login: '', password: '', plan: 'Starter', planExpiry: '', eld: 'None', status: 'Active',
+  plan: 'Basic', planExpiry: '', eld: 'None', status: 'Active',
   logo: '',
 };
 
-function CompanyModal({ mode, initial, onClose, onSave }: {
+function CompanyModal({ mode, initial, plans, onClose, onSave }: {
   mode: 'create' | 'edit';
   initial?: Partial<FormState>;
+  plans: FetchedPlan[];
   onClose: () => void;
   onSave: (f: FormState) => Promise<void>;
 }) {
@@ -756,7 +682,8 @@ function CompanyModal({ mode, initial, onClose, onSave }: {
     const e: Partial<Record<keyof FormState, string>> = {};
     if (!form.name.trim())  e.name  = 'Required';
     if (!form.owner.trim()) e.owner = 'Required';
-    if (!form.login.trim()) e.login = 'Required';
+    if (!form.mc.trim())    e.mc    = 'Required';
+    if (!form.plan)         e.plan  = 'Required';
     return e;
   }
 
@@ -790,8 +717,9 @@ function CompanyModal({ mode, initial, onClose, onSave }: {
   });
 
   const labelStyle = { display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 4 } as const;
+  const disabledInputStyle = { width: '100%', padding: '7px 11px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--muted-foreground)', backgroundColor: 'var(--muted)', outline: 'none', boxSizing: 'border-box' as const, opacity: 0.5, cursor: 'not-allowed' };
 
-  const Field = ({ label, fkey, type = 'text', placeholder = '' }: { label: string; fkey: keyof FormState; type?: string; placeholder?: string }) => (
+  const field = (label: string, fkey: keyof FormState, type = 'text', placeholder = '') => (
     <div>
       <label style={labelStyle}>{label}</label>
       <input type={type} value={form[fkey] as string} placeholder={placeholder} onChange={set(fkey)} style={inputStyle(fkey)} />
@@ -799,14 +727,14 @@ function CompanyModal({ mode, initial, onClose, onSave }: {
     </div>
   );
 
-  const Select = ({ label, fkey, options }: { label: string; fkey: keyof FormState; options: string[] }) => (
+  const selectField = (label: string, fkey: keyof FormState, options: string[]) => (
     <div>
       <label style={labelStyle}>{label}</label>
       <CustomSelect value={form[fkey] as string} options={options} onChange={(v) => setForm(f => ({ ...f, [fkey]: v }))} />
     </div>
   );
 
-  const DateField = ({ label, fkey }: { label: string; fkey: keyof FormState }) => (
+  const dateField = (label: string, fkey: keyof FormState) => (
     <div>
       <label style={labelStyle}>{label}</label>
       <DatePicker value={form[fkey] as string} onChange={(v) => setForm(f => ({ ...f, [fkey]: v }))} />
@@ -840,25 +768,55 @@ function CompanyModal({ mode, initial, onClose, onSave }: {
           />
           <div style={{ borderTop: '1px solid var(--border)', marginBottom: 4 }} />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="MC Number" fkey="mc" placeholder="MC-000000" />
-            <Field label="Company Name" fkey="name" placeholder="e.g. Acme Corp" />
+            {field('MC Number', 'mc', 'text', 'MC-000000')}
+            {field('Company Name', 'name', 'text', 'e.g. Acme Corp')}
           </div>
-          <Field label="Owner Name" fkey="owner" placeholder="e.g. Jane Smith" />
+          {field('Owner Name', 'owner', 'text', 'e.g. Jane Smith')}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Owner Phone" fkey="ownerPhone" placeholder="+1 (555) 000-0000" />
-            <Field label="Owner Telegram" fkey="ownerTelegram" placeholder="@username" />
+            {field('Owner Phone', 'ownerPhone', 'text', '+1 (555) 000-0000')}
+            {field('Owner Telegram', 'ownerTelegram', 'text', '@username')}
+          </div>
+          {/* Login / Password — fields not yet handled by the backend */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                Login
+                <span style={{ fontSize: '0.62rem', fontWeight: 700, backgroundColor: '#FEF9C3', color: '#92400E', border: '1px solid #FDE68A', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.03em' }}>
+                  BACKEND PENDING
+                </span>
+              </label>
+              <input disabled placeholder="company.login" style={{ ...disabledInputStyle }} />
+            </div>
+            <div>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                Password
+                <span style={{ fontSize: '0.62rem', fontWeight: 700, backgroundColor: '#FEF9C3', color: '#92400E', border: '1px solid #FDE68A', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.03em' }}>
+                  BACKEND PENDING
+                </span>
+              </label>
+              <input disabled type="password" placeholder="••••••••" style={{ ...disabledInputStyle }} />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Login" fkey="login" placeholder="company.login" />
-            <Field label="Password" fkey="password" type="password" placeholder={mode === 'edit' ? 'Leave blank to keep' : '••••••••'} />
+            <div>
+              <label style={labelStyle}>Plan</label>
+              <CustomSelect
+                value={form.plan}
+                options={PLAN_ENUM}
+                onChange={(v) => {
+                  const matched = plans.find(p => p.name === v);
+                  const expiry = matched
+                    ? (() => { const d = new Date(); d.setDate(d.getDate() + matched.duration); return d.toISOString().split('T')[0]; })()
+                    : form.planExpiry;
+                  setForm(f => ({ ...f, plan: v, planExpiry: expiry }));
+                }}
+              />
+            </div>
+            {dateField('Plan Expiry Date', 'planExpiry')}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Plan" fkey="plan" options={['Enterprise', 'Professional', 'Starter', 'Basic']} />
-            <DateField label="Plan Expiry Date" fkey="planExpiry" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Select label="ELD Provider" fkey="eld" options={ELD_OPTIONS} />
-            <Select label="Status" fkey="status" options={['Active', 'Pending', 'Suspended']} />
+            {selectField('ELD Provider', 'eld', ELD_OPTIONS)}
+            {selectField('Status', 'status', ['Active', 'Pending', 'Suspended'])}
           </div>
 
           {serverError && (
@@ -894,12 +852,13 @@ function CompanyModal({ mode, initial, onClose, onSave }: {
 
 export default function CompaniesPage() {
   const [rows, setRows]                 = useState<Company[]>([]);
+  const [plans, setPlans]               = useState<FetchedPlan[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
   const [loadError, setLoadError]       = useState('');
   const [tab, setTab]                   = useState<TabId>('all');
   const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Status>('all');
-  const [planFilter,   setPlanFilter]   = useState<'all' | Plan>('all');
+  const [planFilter,   setPlanFilter]   = useState<string>('all');
   const [page, setPage]                 = useState(1);
 
   const [createOpen,   setCreateOpen]   = useState(false);
@@ -912,8 +871,12 @@ export default function CompaniesPage() {
     setIsLoading(true);
     setLoadError('');
     try {
-      const data = await api.get<ApiCompany[]>('/companies');
-      setRows(data.map(toUICompany));
+      const [companies, fetchedPlans] = await Promise.all([
+        api.get<ApiCompany[]>('/companies'),
+        api.get<FetchedPlan[]>('/plans'),
+      ]);
+      setRows(companies.map(toUICompany));
+      setPlans(fetchedPlans);
     } catch {
       setLoadError('Failed to load companies. Please refresh.');
     } finally {
@@ -944,8 +907,7 @@ export default function CompaniesPage() {
       if (
         !c.name.toLowerCase().includes(q) &&
         !c.owner.toLowerCase().includes(q) &&
-        !c.mc.toLowerCase().includes(q) &&
-        !c.login.toLowerCase().includes(q)
+        !c.mc.toLowerCase().includes(q)
       ) return false;
     }
     return true;
@@ -957,14 +919,14 @@ export default function CompaniesPage() {
   function goPage(p: number) { setPage(Math.min(Math.max(1, p), totalPages)); }
 
   async function handleCreate(f: FormState): Promise<void> {
-    const created = await api.post<ApiCompany>('/companies', toApiPayload(f, 'create'));
+    const created = await api.post<ApiCompany>('/companies', toApiPayload(f));
     setRows(prev => [toUICompany(created), ...prev]);
     setCreateOpen(false);
   }
 
   async function handleEdit(f: FormState): Promise<void> {
     if (!editTarget) return;
-    const updated = await api.put<ApiCompany>(`/companies/${editTarget.id}`, toApiPayload(f, 'edit'));
+    const updated = await api.put<ApiCompany>(`/companies/${editTarget.id}`, toApiPayload(f));
     setRows(prev => prev.map(c => c.id === editTarget.id ? { ...toUICompany(updated), logo: f.logo || undefined } : c));
     setEditTarget(null);
   }
@@ -999,15 +961,15 @@ export default function CompaniesPage() {
     <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
 
       {/* Modals */}
-      {viewTarget   && <CompanyDetailModal company={viewTarget} onClose={() => setViewTarget(null)} onLogoChange={(logo) => handleLogoChange(viewTarget.id, logo)} />}
-      {createOpen   && <CompanyModal mode="create" onClose={() => setCreateOpen(false)} onSave={handleCreate} />}
+      {viewTarget   && <CompanyDetailModal company={viewTarget} plans={plans} onClose={() => setViewTarget(null)} onLogoChange={(logo) => handleLogoChange(viewTarget.id, logo)} />}
+      {createOpen   && <CompanyModal mode="create" plans={plans} initial={EMPTY_FORM} onClose={() => setCreateOpen(false)} onSave={handleCreate} />}
       {editTarget   && (
         <CompanyModal
           mode="edit"
+          plans={plans}
           initial={{
             mc: editTarget.mc, name: editTarget.name, owner: editTarget.owner,
             ownerPhone: editTarget.ownerPhone, ownerTelegram: editTarget.ownerTelegram,
-            login: editTarget.login, password: '',
             plan: editTarget.plan, planExpiry: editTarget.planExpiry,
             status: editTarget.status, eld: editTarget.eld,
             logo: editTarget.logo ?? '',
@@ -1084,7 +1046,7 @@ export default function CompaniesPage() {
               />
             </div>
             <Dropdown<'all' | Status> label="Status" options={STATUS_OPTS} value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} />
-            <Dropdown<'all' | Plan>   label="Plan"   options={PLAN_OPTS}   value={planFilter}   onChange={(v) => { setPlanFilter(v);   setPage(1); }} />
+            <Dropdown<string> label="Plan" options={['all', ...plans.map(p => p.name)]} value={planFilter} onChange={(v) => { setPlanFilter(v); setPage(1); }} getOptionLabel={v => v === 'all' ? 'All Plans' : v} />
           </div>
         </div>
 
@@ -1110,7 +1072,6 @@ export default function CompaniesPage() {
                   <TH>MC</TH>
                   <TH>Name</TH>
                   <TH>Owner Name</TH>
-                  <TH>Login</TH>
                   <TH>Plan</TH>
                   <TH>Plan Expiry</TH>
                   <TH>Registered</TH>
@@ -1122,12 +1083,12 @@ export default function CompaniesPage() {
               <tbody>
                 {paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: '56px 0', color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
+                    <td colSpan={9} style={{ textAlign: 'center', padding: '56px 0', color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
                       No companies match your filters.
                     </td>
                   </tr>
                 ) : paginated.map((c, i) => {
-                  const plan     = PLAN_STYLE[c.plan];
+                  const plan     = planStyle(c.plan, plans);
                   const status   = STATUS_CONFIG[c.status];
                   const eldColor = ELD_COLOR[c.eld] ?? '#94A3B8';
                   return (
@@ -1143,7 +1104,7 @@ export default function CompaniesPage() {
                       </td>
 
                       <td style={{ padding: '11px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                        <button onClick={() => setViewTarget(c)} style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                           <div style={{ width: 32, height: 32, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: c.logoColor + '1A', color: c.logoColor, overflow: 'hidden' }}>
                             {c.logo
                               ? <img src={c.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1151,7 +1112,7 @@ export default function CompaniesPage() {
                             }
                           </div>
                           <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--foreground)', whiteSpace: 'nowrap' }}>{c.name}</span>
-                        </div>
+                        </button>
                       </td>
 
                       <td style={{ padding: '11px 14px' }}>
@@ -1161,12 +1122,6 @@ export default function CompaniesPage() {
                           </div>
                           <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--foreground)', whiteSpace: 'nowrap' }}>{c.owner}</span>
                         </div>
-                      </td>
-
-                      <td style={{ padding: '11px 14px' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: '0.72rem', color: 'var(--foreground)', backgroundColor: 'var(--muted)', padding: '2px 8px', borderRadius: 5, whiteSpace: 'nowrap' }}>
-                          {c.login}
-                        </span>
                       </td>
 
                       <td style={{ padding: '11px 14px' }}>
@@ -1195,12 +1150,20 @@ export default function CompaniesPage() {
                       </td>
 
                       <td style={{ padding: '11px 14px' }}>
-                        <ActionsMenu
-                          company={c}
-                          onView={() => setViewTarget(c)}
-                          onEdit={() => setEditTarget(c)}
-                          onDelete={() => setDeleteTarget(c)}
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                          <button onClick={() => setEditTarget(c)} title="Edit"
+                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
+                            <Pencil size={13} />
+                          </button>
+                          <button onClick={() => setDeleteTarget(c)} title="Delete"
+                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #FECACA', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FEE2E2')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FEF2F2')}>
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

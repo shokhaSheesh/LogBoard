@@ -1,4 +1,4 @@
-const BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080') + '/api/v1';
+const BASE = (import.meta.env.VITE_API_URL ?? '') + '/api/v1';
 
 function getToken(): string | null {
   return localStorage.getItem('auth_token') ?? sessionStorage.getItem('auth_token');

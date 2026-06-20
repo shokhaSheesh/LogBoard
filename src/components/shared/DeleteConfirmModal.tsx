@@ -9,6 +9,7 @@ interface DeleteConfirmModalProps {
   confirmLabel?: string;
   icon?: ReactNode;
   loading?: boolean;
+  error?: string;
 }
 
 export function DeleteConfirmModal({
@@ -19,6 +20,7 @@ export function DeleteConfirmModal({
   confirmLabel = 'Yes, Delete',
   icon,
   loading = false,
+  error,
 }: DeleteConfirmModalProps) {
   return (
     <div
@@ -60,6 +62,11 @@ export function DeleteConfirmModal({
           >
             {description}
           </p>
+          {error && (
+            <div style={{ marginTop: 10, backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, color: '#DC2626', fontSize: '0.78rem', padding: '7px 11px' }}>
+              {error}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 px-6 pb-5">
