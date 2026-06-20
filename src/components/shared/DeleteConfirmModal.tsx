@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 interface DeleteConfirmModalProps {
   title: string;
@@ -8,6 +8,7 @@ interface DeleteConfirmModalProps {
   onCancel: () => void;
   confirmLabel?: string;
   icon?: ReactNode;
+  loading?: boolean;
 }
 
 export function DeleteConfirmModal({
@@ -17,6 +18,7 @@ export function DeleteConfirmModal({
   onCancel,
   confirmLabel = 'Yes, Delete',
   icon,
+  loading = false,
 }: DeleteConfirmModalProps) {
   return (
     <div
@@ -63,6 +65,7 @@ export function DeleteConfirmModal({
         <div className="flex gap-2 px-6 pb-5">
           <button
             onClick={onCancel}
+            disabled={loading}
             className="flex-1 rounded-lg py-2 transition-colors"
             style={{
               fontSize: '0.83rem',
@@ -70,32 +73,30 @@ export function DeleteConfirmModal({
               color: 'var(--foreground)',
               backgroundColor: 'var(--muted)',
               border: '1px solid var(--border)',
+              opacity: loading ? 0.6 : 1,
+              cursor: loading ? 'not-allowed' : 'pointer',
             }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.backgroundColor = '#E5E7EB')
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)')
-            }
+            onMouseEnter={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#E5E7EB'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 rounded-lg py-2 transition-colors"
+            disabled={loading}
+            className="flex-1 rounded-lg py-2 transition-colors flex items-center justify-center gap-2"
             style={{
               fontSize: '0.83rem',
               fontWeight: 600,
               backgroundColor: '#DC2626',
               color: '#ffffff',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.8 : 1,
             }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.backgroundColor = '#B91C1C')
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.backgroundColor = '#DC2626')
-            }
+            onMouseEnter={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#B91C1C'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#DC2626'; }}
           >
+            {loading && <Loader2 size={14} className="animate-spin" />}
             {confirmLabel}
           </button>
         </div>

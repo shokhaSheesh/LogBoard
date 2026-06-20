@@ -1,17 +1,35 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Search, Building2, CheckCircle2, Clock, XCircle,
   MoreVertical, Plus, Download, Eye, EyeOff, Pencil, Trash2, X,
-  Phone, Send, Shield, Camera, ChevronDown, ChevronLeft, ChevronRight,
+  Phone, Send, Shield, Camera, ChevronDown, ChevronLeft, ChevronRight, Loader2,
 } from 'lucide-react';
 import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
+import { api, ApiException } from '@/lib/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Status = 'Active' | 'Pending' | 'Suspended';
 type Plan   = 'Enterprise' | 'Professional' | 'Starter' | 'Basic';
+
+interface ApiCompany {
+  id: string;
+  mc: string;
+  name: string;
+  owner: string;
+  owner_phone: string;
+  owner_telegram: string;
+  login: string;
+  password: string;
+  plan: Plan;
+  plan_expiry: string;
+  eld: string;
+  status: Status;
+  created_at: string;
+  updated_at: string;
+}
 
 interface Company {
   id: string;
@@ -33,26 +51,6 @@ interface Company {
   status: Status;
   eld: string;
 }
-
-// ── Data ──────────────────────────────────────────────────────────────────────
-
-const SEED: Company[] = [
-  { id:'CMP-00041', mc:'MC-481290', name:'Acme Corp',         initials:'AC', logoColor:'#2563EB', owner:'James Whitfield',  ownerPhone:'+1 (214) 555-0192', ownerTelegram:'@jwhitfield',   ownerInitials:'JW', ownerColor:'#6366F1', login:'acme.corp',     password:'Acme@2024!',   plan:'Enterprise',   planExpiry:'Dec 31, 2026', registeredDate:'Jan 12, 2023', status:'Active',    eld:'Samsara'     },
-  { id:'CMP-00042', mc:'MC-372841', name:'Helios Systems',    initials:'HS', logoColor:'#8B5CF6', owner:'Maria Gonzalez',   ownerPhone:'+1 (312) 555-0438', ownerTelegram:'@mgonzalez',    ownerInitials:'MG', ownerColor:'#10B981', login:'helios.sys',    password:'Heli0s#Pro',   plan:'Professional', planExpiry:'Sep 15, 2026', registeredDate:'Feb 3, 2023',  status:'Active',    eld:'Motive'      },
-  { id:'CMP-00043', mc:'MC-519034', name:'Orbital Labs',      initials:'OL', logoColor:'#10B981', owner:'Derek Osei',       ownerPhone:'+1 (404) 555-0271', ownerTelegram:'@dereklab',     ownerInitials:'DO', ownerColor:'#F59E0B', login:'orbital.labs',  password:'Orb!tal99',    plan:'Starter',      planExpiry:'Mar 20, 2026', registeredDate:'Feb 19, 2023', status:'Pending',   eld:'None'        },
-  { id:'CMP-00044', mc:'MC-284716', name:'Zenith Finance',    initials:'ZF', logoColor:'#F59E0B', owner:'Linda Park',       ownerPhone:'+1 (650) 555-0384', ownerTelegram:'@lindapark_z',  ownerInitials:'LP', ownerColor:'#EC4899', login:'zenith.fin',    password:'Z3n!th$2025',  plan:'Enterprise',   planExpiry:'Jun 30, 2026', registeredDate:'Mar 7, 2023',  status:'Active',    eld:'Omnitracs'   },
-  { id:'CMP-00045', mc:'MC-637508', name:'Nova Networks',     initials:'NN', logoColor:'#EC4899', owner:'Chris Adeyemi',    ownerPhone:'+1 (469) 555-0517', ownerTelegram:'@chrisa_nn',    ownerInitials:'CA', ownerColor:'#2563EB', login:'nova.networks', password:'Nov@Net#01',   plan:'Basic',        planExpiry:'Jan 10, 2026', registeredDate:'Mar 22, 2023', status:'Suspended', eld:'None'        },
-  { id:'CMP-00046', mc:'MC-193472', name:'Apex Freight',      initials:'AF', logoColor:'#14B8A6', owner:'Samantha Lee',     ownerPhone:'+1 (713) 555-0629', ownerTelegram:'@samlee_apex',  ownerInitials:'SL', ownerColor:'#8B5CF6', login:'apex.freight',  password:'Ap3xFr8!ght',  plan:'Professional', planExpiry:'Nov 28, 2025', registeredDate:'Apr 5, 2023',  status:'Active',    eld:'KeepTruckin' },
-  { id:'CMP-00047', mc:'MC-748321', name:'Crestline Cargo',   initials:'CC', logoColor:'#6366F1', owner:'Tobias Müller',    ownerPhone:'+49 30 555-0741',   ownerTelegram:'@tmueller',     ownerInitials:'TM', ownerColor:'#14B8A6', login:'crestline.crg', password:'Cr3st!2024',   plan:'Starter',      planExpiry:'Apr 5, 2026',  registeredDate:'Apr 18, 2023', status:'Active',    eld:'PeopleNet'   },
-  { id:'CMP-00048', mc:'MC-826493', name:'Summit Logistics',  initials:'SL', logoColor:'#F97316', owner:'Amara Nwosu',      ownerPhone:'+1 (832) 555-0853', ownerTelegram:'@anwosu_sum',   ownerInitials:'AN', ownerColor:'#F97316', login:'summit.logi',   password:'Summ!t@9',     plan:'Enterprise',   planExpiry:'Aug 14, 2026', registeredDate:'May 2, 2023',  status:'Pending',   eld:'Samsara'     },
-  { id:'CMP-00049', mc:'MC-461827', name:'BlueSky Haulers',   initials:'BH', logoColor:'#0EA5E9', owner:'Ryan Torres',      ownerPhone:'+1 (972) 555-0964', ownerTelegram:'@rtorres_bsh',  ownerInitials:'RT', ownerColor:'#0EA5E9', login:'bluesky.haul',  password:'BlueSky$22',   plan:'Basic',        planExpiry:'Feb 28, 2026', registeredDate:'May 14, 2023', status:'Active',    eld:'None'        },
-  { id:'CMP-00050', mc:'MC-539184', name:'IronBridge Co.',    initials:'IB', logoColor:'#64748B', owner:'Fatima Al-Rashid', ownerPhone:'+966 50 555-1075',  ownerTelegram:'@fatima_ib',    ownerInitials:'FA', ownerColor:'#6366F1', login:'ironbridge.co', password:'Ir0nBr!dge#',  plan:'Professional', planExpiry:'Oct 22, 2025', registeredDate:'May 29, 2023', status:'Active',    eld:'Motive'      },
-  { id:'CMP-00051', mc:'MC-712056', name:'Vanguard Fleet',    initials:'VF', logoColor:'#DC2626', owner:'Kwame Asante',     ownerPhone:'+233 24 555-1186',  ownerTelegram:'@kasante_vg',   ownerInitials:'KA', ownerColor:'#10B981', login:'vanguard.flt',  password:'V@ngr!d2024',  plan:'Enterprise',   planExpiry:'May 5, 2026',  registeredDate:'Jun 10, 2023', status:'Suspended', eld:'Omnitracs'   },
-  { id:'CMP-00052', mc:'MC-384720', name:'Trident Supply',    initials:'TS', logoColor:'#7C3AED', owner:'Priya Sharma',     ownerPhone:'+91 98 555-1297',   ownerTelegram:'@psharma_ts',   ownerInitials:'PS', ownerColor:'#EC4899', login:'trident.sup',   password:'Tr!d3nt$up',   plan:'Starter',      planExpiry:'Jul 18, 2026', registeredDate:'Jun 23, 2023', status:'Active',    eld:'None'        },
-  { id:'CMP-00053', mc:'MC-627435', name:'Redline Transport', initials:'RT', logoColor:'#EF4444', owner:'Marcus Webb',      ownerPhone:'+1 (615) 555-1308', ownerTelegram:'@mwebb_red',    ownerInitials:'MW', ownerColor:'#F59E0B', login:'redline.trans',  password:'R3dL!ne#23',   plan:'Basic',        planExpiry:'Dec 12, 2025', registeredDate:'Jul 4, 2023',  status:'Pending',   eld:'KeepTruckin' },
-  { id:'CMP-00054', mc:'MC-291563', name:'Clearpath Inc.',    initials:'CI', logoColor:'#059669', owner:'Naomi Okafor',     ownerPhone:'+234 80 555-1419',  ownerTelegram:'@nokafor_cp',   ownerInitials:'NO', ownerColor:'#2563EB', login:'clearpath.inc', password:'Cl3@rP@th99',  plan:'Professional', planExpiry:'Sep 3, 2026',  registeredDate:'Jul 17, 2023', status:'Active',    eld:'Samsara'     },
-  { id:'CMP-00055', mc:'MC-853209', name:'Fusion Carriers',   initials:'FC', logoColor:'#D97706', owner:'Ethan Blackwell',  ownerPhone:'+1 (503) 555-1520', ownerTelegram:'@eblackwell',   ownerInitials:'EB', ownerColor:'#8B5CF6', login:'fusion.carr',   password:'Fus!0nC@rr',   plan:'Enterprise',   planExpiry:'Mar 31, 2027', registeredDate:'Aug 1, 2023',  status:'Active',    eld:'PeopleNet'   },
-];
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -78,20 +76,58 @@ const ELD_COLOR: Record<string, string> = {
   None:        '#94A3B8',
 };
 
-type TabId = 'all' | Status;
-const TABS: TabItem<TabId>[] = [
-  { id: 'all',       label: 'All',       count: 462, icon: <Building2 size={13} />    },
-  { id: 'Active',    label: 'Active',    count: 450, icon: <CheckCircle2 size={13} /> },
-  { id: 'Pending',   label: 'Pending',   count: 12,  icon: <Clock size={13} />        },
-  { id: 'Suspended', label: 'Suspended', count: 5,   icon: <XCircle size={13} />      },
-];
+const COLORS = ['#2563EB','#8B5CF6','#10B981','#F59E0B','#EC4899','#14B8A6','#6366F1','#F97316'];
 
+type TabId = 'all' | Status;
 const STATUS_OPTS: ('all' | Status)[] = ['all', 'Active', 'Pending', 'Suspended'];
 const PLAN_OPTS:   ('all' | Plan)[]   = ['all', 'Enterprise', 'Professional', 'Starter', 'Basic'];
 const ELD_OPTIONS = ['None', 'Samsara', 'Motive', 'Omnitracs', 'PeopleNet', 'KeepTruckin'];
 
 const PER_PAGE = 10;
-let _nextId = 56;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function colorFromStr(s: string): string {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return COLORS[Math.abs(h) % COLORS.length];
+}
+
+function toUICompany(a: ApiCompany): Company {
+  const initials      = a.name.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const ownerInitials = a.owner.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const planExpiry    = a.plan_expiry ? fmtDStr(new Date(a.plan_expiry)) : '';
+  const registeredDate = a.created_at
+    ? new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
+  return {
+    id: a.id, mc: a.mc, name: a.name, initials,
+    logoColor: colorFromStr(a.id),
+    owner: a.owner,
+    ownerPhone: a.owner_phone,
+    ownerTelegram: a.owner_telegram,
+    ownerInitials,
+    ownerColor: colorFromStr(a.id + '_owner'),
+    login: a.login, password: a.password,
+    plan: a.plan, planExpiry,
+    registeredDate, status: a.status, eld: a.eld,
+  };
+}
+
+function toApiPayload(f: FormState, mode: 'create' | 'edit') {
+  const payload: Record<string, unknown> = {
+    mc: f.mc, name: f.name, owner: f.owner,
+    owner_phone: f.ownerPhone,
+    owner_telegram: f.ownerTelegram,
+    login: f.login,
+    plan: f.plan,
+    plan_expiry: f.planExpiry ? (() => { const d = new Date(f.planExpiry); return d.toISOString().split('T')[0] + 'T00:00:00Z'; })() : '',
+    eld: f.eld,
+    status: f.status,
+  };
+  if (mode === 'create' || f.password) payload.password = f.password;
+  return payload;
+}
 
 // ── Tiny inline SVG icons ─────────────────────────────────────────────────────
 
@@ -152,7 +188,6 @@ function CustomSelect({ value, options, onChange }: {
     return () => document.removeEventListener('mousedown', h);
   }, [open]);
 
-  // After popup renders, measure its real height and flip above if needed
   useEffect(() => {
     if (!open || ready || !popRef.current || !trigRef.current) return;
     const pop  = popRef.current.getBoundingClientRect();
@@ -245,7 +280,6 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
     return () => document.removeEventListener('mousedown', h);
   }, [open]);
 
-  // After popup renders, measure real height and flip above if needed
   useEffect(() => {
     if (!open || ready || !popRef.current || !trigRef.current) return;
     const pop  = popRef.current.getBoundingClientRect();
@@ -316,7 +350,6 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
           opacity: ready ? 1 : 0, transition: 'opacity 80ms',
         }}>
 
-          {/* ── Day view ── */}
           {view === 'day' && <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <NavBtn onClick={() => { const d = new Date(cur.y, cur.m - 1); setCur({ y: d.getFullYear(), m: d.getMonth() }); }} icon={<ChevronLeft size={15} />} />
@@ -353,7 +386,6 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
             )}
           </>}
 
-          {/* ── Month view ── */}
           {view === 'month' && <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <NavBtn onClick={() => setCur(c => ({ ...c, y: c.y - 1 }))} icon={<ChevronLeft size={15} />} />
@@ -380,7 +412,6 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
             </div>
           </>}
 
-          {/* ── Year view ── */}
           {view === 'year' && <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <NavBtn onClick={() => setCur(c => ({ ...c, y: yearBase(c.y) - 1 }))} icon={<ChevronLeft size={15} />} />
@@ -498,8 +529,8 @@ function CompanyDetailModal({ company, onClose, onLogoChange }: {
     reader.readAsDataURL(file);
     e.target.value = '';
   }
-  const plan   = PLAN_STYLE[company.plan];
-  const status = STATUS_CONFIG[company.status];
+  const plan     = PLAN_STYLE[company.plan];
+  const status   = STATUS_CONFIG[company.status];
   const eldColor = ELD_COLOR[company.eld] ?? '#94A3B8';
 
   interface RowProps { icon: React.ReactNode; label: string; value: React.ReactNode; mono?: boolean; last?: boolean; }
@@ -523,7 +554,6 @@ function CompanyDetailModal({ company, onClose, onLogoChange }: {
       <div className="rounded-2xl shadow-2xl w-full"
         style={{ backgroundColor: 'var(--card)', maxWidth: 520, border: '1px solid var(--border)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
 
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--foreground)' }}>Company Details</h2>
           <button onClick={onClose}
@@ -536,10 +566,7 @@ function CompanyDetailModal({ company, onClose, onLogoChange }: {
           </button>
         </div>
 
-        {/* Body */}
         <div className="overflow-y-auto px-6 py-4 flex-1">
-
-          {/* Identity hero */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: 16, borderRadius: 12, backgroundColor: 'var(--muted)' }}>
             <div
               onClick={() => fileRef.current?.click()}
@@ -573,7 +600,6 @@ function CompanyDetailModal({ company, onClose, onLogoChange }: {
             </div>
           </div>
 
-          {/* Detail rows */}
           <Row icon={<Shield size={14} />}       label="MC Number"           value={company.mc}           mono />
           <Row icon={<Building2 size={14} />}    label="Company Name"        value={company.name} />
           <Row
@@ -621,7 +647,6 @@ function CompanyDetailModal({ company, onClose, onLogoChange }: {
           />
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-4 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
           <button onClick={onClose}
             className="w-full py-2 rounded-lg"
@@ -720,24 +745,38 @@ function CompanyModal({ mode, initial, onClose, onSave }: {
   mode: 'create' | 'edit';
   initial?: Partial<FormState>;
   onClose: () => void;
-  onSave: (f: FormState) => void;
+  onSave: (f: FormState) => Promise<void>;
 }) {
-  const [form, setForm] = useState<FormState>({ ...EMPTY_FORM, ...initial });
-  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [form, setForm]         = useState<FormState>({ ...EMPTY_FORM, ...initial });
+  const [errors, setErrors]     = useState<Partial<Record<keyof FormState, string>>>({});
+  const [saving, setSaving]     = useState(false);
+  const [serverError, setServerError] = useState('');
 
   function validate() {
     const e: Partial<Record<keyof FormState, string>> = {};
-    if (!form.name.trim())  e.name = 'Required';
+    if (!form.name.trim())  e.name  = 'Required';
     if (!form.owner.trim()) e.owner = 'Required';
     if (!form.login.trim()) e.login = 'Required';
     return e;
   }
 
-  function handleSubmit(ev: React.FormEvent) {
+  async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    onSave(form);
+    setSaving(true);
+    setServerError('');
+    try {
+      await onSave(form);
+    } catch (err) {
+      if (err instanceof ApiException) {
+        if (err.code === 'conflict') setServerError('MC number or login already exists.');
+        else setServerError(err.message || 'Something went wrong.');
+      } else {
+        setServerError('Unable to save. Please try again.');
+      }
+      setSaving(false);
+    }
   }
 
   const set = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -783,9 +822,9 @@ function CompanyModal({ mode, initial, onClose, onSave }: {
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--foreground)' }}>
             {mode === 'create' ? 'Add New Company' : 'Edit Company'}
           </h2>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg"
-            style={{ color: 'var(--muted-foreground)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
+          <button onClick={onClose} disabled={saving} className="w-7 h-7 flex items-center justify-center rounded-lg"
+            style={{ color: 'var(--muted-foreground)', backgroundColor: 'transparent', border: 'none', cursor: saving ? 'not-allowed' : 'pointer' }}
+            onMouseEnter={(e) => { if (!saving) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
           >
             <X size={16} />
@@ -811,7 +850,7 @@ function CompanyModal({ mode, initial, onClose, onSave }: {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Login" fkey="login" placeholder="company.login" />
-            <Field label="Password" fkey="password" type="password" placeholder="••••••••" />
+            <Field label="Password" fkey="password" type="password" placeholder={mode === 'edit' ? 'Leave blank to keep' : '••••••••'} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Select label="Plan" fkey="plan" options={['Enterprise', 'Professional', 'Starter', 'Basic']} />
@@ -821,19 +860,27 @@ function CompanyModal({ mode, initial, onClose, onSave }: {
             <Select label="ELD Provider" fkey="eld" options={ELD_OPTIONS} />
             <Select label="Status" fkey="status" options={['Active', 'Pending', 'Suspended']} />
           </div>
+
+          {serverError && (
+            <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, color: '#B91C1C', fontSize: '0.78rem', padding: '8px 12px' }}>
+              {serverError}
+            </div>
+          )}
+
           <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose}
+            <button type="button" onClick={onClose} disabled={saving}
               className="flex-1 py-2 rounded-lg"
-              style={{ fontSize: '0.83rem', fontWeight: 500, color: 'var(--foreground)', backgroundColor: 'var(--muted)', border: '1px solid var(--border)', cursor: 'pointer' }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#E5E7EB'; }}
+              style={{ fontSize: '0.83rem', fontWeight: 500, color: 'var(--foreground)', backgroundColor: 'var(--muted)', border: '1px solid var(--border)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
+              onMouseEnter={(e) => { if (!saving) (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#E5E7EB'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
             >
               Cancel
             </button>
-            <button type="submit"
-              className="flex-1 py-2 rounded-lg"
-              style={{ fontSize: '0.83rem', fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', cursor: 'pointer' }}
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2 rounded-lg flex items-center justify-center gap-2"
+              style={{ fontSize: '0.83rem', fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.8 : 1 }}
             >
+              {saving && <Loader2 size={14} className="animate-spin" />}
               {mode === 'create' ? 'Add Company' : 'Save Changes'}
             </button>
           </div>
@@ -846,8 +893,10 @@ function CompanyModal({ mode, initial, onClose, onSave }: {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CompaniesPage() {
-  const [rows, setRows]                 = useState<Company[]>(SEED);
-  const [tab, setTab]                   = useState<TabId>('Active');
+  const [rows, setRows]                 = useState<Company[]>([]);
+  const [isLoading, setIsLoading]       = useState(true);
+  const [loadError, setLoadError]       = useState('');
+  const [tab, setTab]                   = useState<TabId>('all');
   const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Status>('all');
   const [planFilter,   setPlanFilter]   = useState<'all' | Plan>('all');
@@ -857,6 +906,34 @@ export default function CompaniesPage() {
   const [editTarget,   setEditTarget]   = useState<Company | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
   const [viewTarget,   setViewTarget]   = useState<Company | null>(null);
+  const [deleting,     setDeleting]     = useState(false);
+
+  const fetchCompanies = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError('');
+    try {
+      const data = await api.get<ApiCompany[]>('/companies');
+      setRows(data.map(toUICompany));
+    } catch {
+      setLoadError('Failed to load companies. Please refresh.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
+
+  const totalCount     = rows.length;
+  const activeCount    = rows.filter(c => c.status === 'Active').length;
+  const pendingCount   = rows.filter(c => c.status === 'Pending').length;
+  const suspendedCount = rows.filter(c => c.status === 'Suspended').length;
+
+  const TABS: TabItem<TabId>[] = useMemo(() => [
+    { id: 'all',       label: 'All',       count: totalCount,     icon: <Building2 size={13} />    },
+    { id: 'Active',    label: 'Active',    count: activeCount,    icon: <CheckCircle2 size={13} /> },
+    { id: 'Pending',   label: 'Pending',   count: pendingCount,   icon: <Clock size={13} />        },
+    { id: 'Suspended', label: 'Suspended', count: suspendedCount, icon: <XCircle size={13} />      },
+  ], [totalCount, activeCount, pendingCount, suspendedCount]);
 
   const filtered = useMemo(() => rows.filter((c) => {
     if (tab !== 'all' && c.status !== tab) return false;
@@ -874,65 +951,39 @@ export default function CompaniesPage() {
     return true;
   }), [rows, tab, statusFilter, planFilter, search]);
 
-  const totalCount     = rows.length;
-  const activeCount    = rows.filter(c => c.status === 'Active').length;
-  const suspendedCount = rows.filter(c => c.status === 'Suspended').length;
-
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   function goPage(p: number) { setPage(Math.min(Math.max(1, p), totalPages)); }
 
-  const COLORS = ['#2563EB','#8B5CF6','#10B981','#F59E0B','#EC4899','#14B8A6','#6366F1','#F97316'];
-
-  function handleCreate(f: FormState) {
-    const words    = f.name.split(' ');
-    const initials = words.map((w) => w[0]).slice(0, 2).join('').toUpperCase();
-    const newRow: Company = {
-      id:            `CMP-000${_nextId++}`,
-      mc:            f.mc || `MC-${Math.floor(100000 + Math.random() * 900000)}`,
-      name:          f.name,
-      initials,
-      logoColor:     COLORS[_nextId % COLORS.length],
-      owner:         f.owner,
-      ownerPhone:    f.ownerPhone,
-      ownerTelegram: f.ownerTelegram,
-      ownerInitials: f.owner.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase(),
-      ownerColor:    COLORS[(_nextId + 3) % COLORS.length],
-      login:         f.login,
-      password:      f.password,
-      plan:          f.plan,
-      planExpiry:    f.planExpiry || 'Dec 31, 2026',
-      registeredDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status:        f.status,
-      eld:           f.eld,
-      logo:          f.logo || undefined,
-    };
-    setRows((prev) => [newRow, ...prev]);
+  async function handleCreate(f: FormState): Promise<void> {
+    const created = await api.post<ApiCompany>('/companies', toApiPayload(f, 'create'));
+    setRows(prev => [toUICompany(created), ...prev]);
     setCreateOpen(false);
   }
 
-  function handleEdit(f: FormState) {
+  async function handleEdit(f: FormState): Promise<void> {
     if (!editTarget) return;
-    setRows((prev) => prev.map((c) => c.id === editTarget.id ? {
-      ...c,
-      mc: f.mc, name: f.name, owner: f.owner, ownerPhone: f.ownerPhone,
-      ownerTelegram: f.ownerTelegram, login: f.login, password: f.password,
-      plan: f.plan, planExpiry: f.planExpiry, status: f.status, eld: f.eld,
-      logo: f.logo || undefined,
-    } : c));
+    const updated = await api.put<ApiCompany>(`/companies/${editTarget.id}`, toApiPayload(f, 'edit'));
+    setRows(prev => prev.map(c => c.id === editTarget.id ? { ...toUICompany(updated), logo: f.logo || undefined } : c));
     setEditTarget(null);
   }
 
   function handleLogoChange(id: string, logo: string) {
-    setRows((prev) => prev.map((c) => c.id === id ? { ...c, logo: logo || undefined } : c));
-    setViewTarget((prev) => prev && prev.id === id ? { ...prev, logo: logo || undefined } : prev);
+    setRows(prev => prev.map(c => c.id === id ? { ...c, logo: logo || undefined } : c));
+    setViewTarget(prev => prev && prev.id === id ? { ...prev, logo: logo || undefined } : prev);
   }
 
-  function handleDelete(id: string) {
-    setRows((prev) => prev.filter((c) => c.id !== id));
-    setDeleteTarget(null);
-    if (paginated.length === 1 && page > 1) setPage((p) => p - 1);
+  async function handleDelete(id: string) {
+    setDeleting(true);
+    try {
+      await api.delete(`/companies/${id}`);
+      setRows(prev => prev.filter(c => c.id !== id));
+      setDeleteTarget(null);
+      if (paginated.length === 1 && page > 1) setPage(p => p - 1);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const start = filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1;
@@ -956,7 +1007,7 @@ export default function CompaniesPage() {
           initial={{
             mc: editTarget.mc, name: editTarget.name, owner: editTarget.owner,
             ownerPhone: editTarget.ownerPhone, ownerTelegram: editTarget.ownerTelegram,
-            login: editTarget.login, password: editTarget.password,
+            login: editTarget.login, password: '',
             plan: editTarget.plan, planExpiry: editTarget.planExpiry,
             status: editTarget.status, eld: editTarget.eld,
             logo: editTarget.logo ?? '',
@@ -971,20 +1022,23 @@ export default function CompaniesPage() {
           description={<>You are about to permanently delete <strong style={{ color: 'var(--foreground)' }}>{deleteTarget.name}</strong>. This cannot be undone.</>}
           onConfirm={() => handleDelete(deleteTarget.id)}
           onCancel={() => setDeleteTarget(null)}
+          loading={deleting}
         />
       )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-4 mb-5">
         {[
-          { label: 'Total',     value: totalCount,     icon: <Building2 size={19} />, iconBg: '#2563EB' },
+          { label: 'Total',     value: totalCount,     icon: <Building2 size={19} />,    iconBg: '#2563EB' },
           { label: 'Active',    value: activeCount,    icon: <CheckCircle2 size={19} />, iconBg: '#10B981' },
-          { label: 'Suspended', value: suspendedCount, icon: <XCircle size={19} />,  iconBg: '#EF4444' },
+          { label: 'Suspended', value: suspendedCount, icon: <XCircle size={19} />,      iconBg: '#EF4444' },
         ].map(({ label, value, icon, iconBg }) => (
           <div key={label} style={{ backgroundColor: 'var(--card)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--muted-foreground)', marginBottom: 6 }}>{label}</div>
-              <div style={{ fontSize: '1.7rem', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1 }}>{value}</div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1 }}>
+                {isLoading ? <span style={{ opacity: 0.3 }}>—</span> : value}
+              </div>
             </div>
             <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff' }}>
               {icon}
@@ -1034,158 +1088,165 @@ export default function CompaniesPage() {
           </div>
         </div>
 
+        {/* Loading / error states */}
+        {isLoading && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '56px 0', color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
+            <Loader2 size={18} className="animate-spin" /> Loading companies…
+          </div>
+        )}
+
+        {!isLoading && loadError && (
+          <div style={{ textAlign: 'center', padding: '56px 0', color: '#B91C1C', fontSize: '0.85rem' }}>
+            {loadError}
+          </div>
+        )}
+
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                <TH>MC</TH>
-                <TH>Name</TH>
-                <TH>Owner Name</TH>
-                <TH>Login</TH>
-                <TH>Plan</TH>
-                <TH>Plan Expiry</TH>
-                <TH>Registered</TH>
-                <TH>Status</TH>
-                <TH>ELD</TH>
-                <TH>Actions</TH>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={10} style={{ textAlign: 'center', padding: '56px 0', color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
-                    No companies match your filters.
-                  </td>
+        {!isLoading && !loadError && (
+          <div className="overflow-x-auto">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <TH>MC</TH>
+                  <TH>Name</TH>
+                  <TH>Owner Name</TH>
+                  <TH>Login</TH>
+                  <TH>Plan</TH>
+                  <TH>Plan Expiry</TH>
+                  <TH>Registered</TH>
+                  <TH>Status</TH>
+                  <TH>ELD</TH>
+                  <TH>Actions</TH>
                 </tr>
-              ) : paginated.map((c, i) => {
-                const plan     = PLAN_STYLE[c.plan];
-                const status   = STATUS_CONFIG[c.status];
-                const eldColor = ELD_COLOR[c.eld] ?? '#94A3B8';
-                return (
-                  <tr key={c.id}
-                    style={{ borderBottom: i < paginated.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'default' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FAFBFF')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    {/* MC */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <span style={{ fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: '0.7rem', color: 'var(--muted-foreground)', letterSpacing: '0.02em' }}>
-                        {c.mc}
-                      </span>
-                    </td>
-
-                    {/* Name */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: c.logoColor + '1A', color: c.logoColor, overflow: 'hidden' }}>
-                          {c.logo
-                            ? <img src={c.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>{c.initials}</span>
-                          }
-                        </div>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--foreground)', whiteSpace: 'nowrap' }}>{c.name}</span>
-                      </div>
-                    </td>
-
-                    {/* Owner Name */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: c.ownerColor + '22', color: c.ownerColor }}>
-                          <span style={{ fontSize: '0.55rem', fontWeight: 700 }}>{c.ownerInitials}</span>
-                        </div>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--foreground)', whiteSpace: 'nowrap' }}>{c.owner}</span>
-                      </div>
-                    </td>
-
-                    {/* Login */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <span style={{ fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: '0.72rem', color: 'var(--foreground)', backgroundColor: 'var(--muted)', padding: '2px 8px', borderRadius: 5, whiteSpace: 'nowrap' }}>
-                        {c.login}
-                      </span>
-                    </td>
-
-                    {/* Plan */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, backgroundColor: plan.bg, color: plan.color, whiteSpace: 'nowrap' }}>
-                        {c.plan}
-                      </span>
-                    </td>
-
-                    {/* Plan Expiry */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>{c.planExpiry}</span>
-                    </td>
-
-                    {/* Registered */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>{c.registeredDate}</span>
-                    </td>
-
-                    {/* Status */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: status.dot, flexShrink: 0, display: 'inline-block' }} />
-                        <span style={{ fontSize: '0.78rem', fontWeight: 500, color: status.color, whiteSpace: 'nowrap' }}>{c.status}</span>
-                      </div>
-                    </td>
-
-                    {/* ELD */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: eldColor, whiteSpace: 'nowrap' }}>{c.eld}</span>
-                    </td>
-
-                    {/* Actions */}
-                    <td style={{ padding: '11px 14px' }}>
-                      <ActionsMenu
-                        company={c}
-                        onView={() => setViewTarget(c)}
-                        onEdit={() => setEditTarget(c)}
-                        onDelete={() => setDeleteTarget(c)}
-                      />
+              </thead>
+              <tbody>
+                {paginated.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} style={{ textAlign: 'center', padding: '56px 0', color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
+                      No companies match your filters.
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                ) : paginated.map((c, i) => {
+                  const plan     = PLAN_STYLE[c.plan];
+                  const status   = STATUS_CONFIG[c.status];
+                  const eldColor = ELD_COLOR[c.eld] ?? '#94A3B8';
+                  return (
+                    <tr key={c.id}
+                      style={{ borderBottom: i < paginated.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'default' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FAFBFF')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <td style={{ padding: '11px 14px' }}>
+                        <span style={{ fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: '0.7rem', color: 'var(--muted-foreground)', letterSpacing: '0.02em' }}>
+                          {c.mc}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '11px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: c.logoColor + '1A', color: c.logoColor, overflow: 'hidden' }}>
+                            {c.logo
+                              ? <img src={c.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>{c.initials}</span>
+                            }
+                          </div>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--foreground)', whiteSpace: 'nowrap' }}>{c.name}</span>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '11px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: c.ownerColor + '22', color: c.ownerColor }}>
+                            <span style={{ fontSize: '0.55rem', fontWeight: 700 }}>{c.ownerInitials}</span>
+                          </div>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--foreground)', whiteSpace: 'nowrap' }}>{c.owner}</span>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '11px 14px' }}>
+                        <span style={{ fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: '0.72rem', color: 'var(--foreground)', backgroundColor: 'var(--muted)', padding: '2px 8px', borderRadius: 5, whiteSpace: 'nowrap' }}>
+                          {c.login}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '11px 14px' }}>
+                        <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, backgroundColor: plan.bg, color: plan.color, whiteSpace: 'nowrap' }}>
+                          {c.plan}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '11px 14px' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>{c.planExpiry}</span>
+                      </td>
+
+                      <td style={{ padding: '11px 14px' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>{c.registeredDate}</span>
+                      </td>
+
+                      <td style={{ padding: '11px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: status.dot, flexShrink: 0, display: 'inline-block' }} />
+                          <span style={{ fontSize: '0.78rem', fontWeight: 500, color: status.color, whiteSpace: 'nowrap' }}>{c.status}</span>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '11px 14px' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: eldColor, whiteSpace: 'nowrap' }}>{c.eld}</span>
+                      </td>
+
+                      <td style={{ padding: '11px 14px' }}>
+                        <ActionsMenu
+                          company={c}
+                          onView={() => setViewTarget(c)}
+                          onEdit={() => setEditTarget(c)}
+                          onDelete={() => setDeleteTarget(c)}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>
-            Showing {start}–{end} of {filtered.length} companies
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <button
-              onClick={() => goPage(page - 1)} disabled={page === 1}
-              style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.78rem', fontWeight: 500, cursor: page === 1 ? 'not-allowed' : 'pointer', color: page === 1 ? 'var(--muted-foreground)' : 'var(--foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', opacity: page === 1 ? 0.5 : 1 }}
-            >
-              Prev
-            </button>
+        {!isLoading && !loadError && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>
+              Showing {start}–{end} of {filtered.length} companies
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button
+                onClick={() => goPage(page - 1)} disabled={page === 1}
+                style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.78rem', fontWeight: 500, cursor: page === 1 ? 'not-allowed' : 'pointer', color: page === 1 ? 'var(--muted-foreground)' : 'var(--foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', opacity: page === 1 ? 0.5 : 1 }}
+              >
+                Prev
+              </button>
 
-            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-              const p = totalPages <= 7 ? i + 1 : i < 3 ? i + 1 : i === 3 ? -1 : totalPages - (6 - i);
-              if (p === -1) return <span key="ellipsis" style={{ padding: '0 4px', color: 'var(--muted-foreground)', fontSize: '0.78rem' }}>…</span>;
-              return (
-                <button key={p} onClick={() => goPage(p)}
-                  style={{ width: 30, height: 30, borderRadius: 7, fontSize: '0.78rem', fontWeight: p === page ? 600 : 400, cursor: 'pointer', backgroundColor: p === page ? '#2563EB' : 'transparent', color: p === page ? '#fff' : 'var(--muted-foreground)', border: 'none' }}
-                  onMouseEnter={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
-                  onMouseLeave={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-                >
-                  {p}
-                </button>
-              );
-            })}
+              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                const p = totalPages <= 7 ? i + 1 : i < 3 ? i + 1 : i === 3 ? -1 : totalPages - (6 - i);
+                if (p === -1) return <span key="ellipsis" style={{ padding: '0 4px', color: 'var(--muted-foreground)', fontSize: '0.78rem' }}>…</span>;
+                return (
+                  <button key={p} onClick={() => goPage(p)}
+                    style={{ width: 30, height: 30, borderRadius: 7, fontSize: '0.78rem', fontWeight: p === page ? 600 : 400, cursor: 'pointer', backgroundColor: p === page ? '#2563EB' : 'transparent', color: p === page ? '#fff' : 'var(--muted-foreground)', border: 'none' }}
+                    onMouseEnter={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
+                    onMouseLeave={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
 
-            <button
-              onClick={() => goPage(page + 1)} disabled={page === totalPages}
-              style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.78rem', fontWeight: 500, cursor: page === totalPages ? 'not-allowed' : 'pointer', color: page === totalPages ? 'var(--muted-foreground)' : 'var(--foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', opacity: page === totalPages ? 0.5 : 1 }}
-            >
-              Next
-            </button>
+              <button
+                onClick={() => goPage(page + 1)} disabled={page === totalPages}
+                style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.78rem', fontWeight: 500, cursor: page === totalPages ? 'not-allowed' : 'pointer', color: page === totalPages ? 'var(--muted-foreground)' : 'var(--foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', opacity: page === totalPages ? 0.5 : 1 }}
+              >
+                Next
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

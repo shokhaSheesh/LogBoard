@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useAuth } from '@/context/AuthContext';
+import { ApiException } from '@/lib/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,7 +20,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!email.trim() || !password.trim()) {
@@ -25,10 +28,24 @@ export default function LoginPage() {
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await login(email.trim(), password, rememberMe);
       navigate('/admin/dashboard');
-    }, 1000);
+    } catch (err) {
+      if (err instanceof ApiException) {
+        if (err.code === 'invalid_credentials') {
+          setError('Invalid email or password.');
+        } else if (err.code === 'invalid_request') {
+          setError('Please check your email and password.');
+        } else {
+          setError(err.message || 'Something went wrong. Please try again.');
+        }
+      } else {
+        setError('Unable to connect to the server. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
