@@ -36,6 +36,7 @@ interface Company {
   initials: string;
   logo?: string;
   logoColor: string;
+  ownerId: string;
   owner: string;
   ownerPhone: string;
   ownerTelegram: string;
@@ -116,6 +117,7 @@ function toUICompany(a: ApiCompany): Company {
   return {
     id: a.id, mc: a.mc, name: a.name, initials,
     logoColor: colorFromStr(a.id),
+    ownerId: a.owner_id ?? '',
     owner: a.owner,
     ownerPhone: a.owner_phone,
     ownerTelegram: a.owner_telegram,
@@ -130,6 +132,7 @@ function toApiPayload(f: FormState) {
   return {
     mc: f.mc,
     name: f.name,
+    owner_id: f.ownerId,
     owner: f.owner,
     owner_phone: f.ownerPhone,
     owner_telegram: f.ownerTelegram,
@@ -656,15 +659,25 @@ function CompanyDetailModal({ company, plans, onClose, onLogoChange }: {
 // ── Company form modal (create / edit) ────────────────────────────────────────
 
 interface FormState {
-  mc: string; name: string; owner: string; ownerPhone: string; ownerTelegram: string;
+  mc: string; name: string;
+  ownerId: string; owner: string; ownerPhone: string; ownerTelegram: string;
   plan: string; planExpiry: string; eld: string; status: Status;
   logo: string;
 }
 const EMPTY_FORM: FormState = {
-  mc: '', name: '', owner: '', ownerPhone: '', ownerTelegram: '',
+  mc: '', name: '',
+  ownerId: '', owner: '', ownerPhone: '', ownerTelegram: '',
   plan: 'Basic', planExpiry: '', eld: 'None', status: 'Active',
   logo: '',
 };
+
+interface BoardUser {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  telegram: string;
+}
 
 function CompanyModal({ mode, initial, plans, onClose, onSave }: {
   mode: 'create' | 'edit';
@@ -677,13 +690,49 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
   const [errors, setErrors]     = useState<Partial<Record<keyof FormState, string>>>({});
   const [saving, setSaving]     = useState(false);
   const [serverError, setServerError] = useState('');
+  const [users, setUsers]       = useState<BoardUser[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [userPickerOpen, setUserPickerOpen] = useState(false);
+  const userPickerRef = useRef<HTMLDivElement>(null);
+  const userSearchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    api.get<BoardUser[]>('/users?kind=board').then(setUsers).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!userPickerOpen) return;
+    const h = (e: MouseEvent) => {
+      if (userPickerRef.current && !userPickerRef.current.contains(e.target as Node)) {
+        setUserPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [userPickerOpen]);
+
+  useEffect(() => {
+    if (userPickerOpen) setTimeout(() => userSearchRef.current?.focus(), 50);
+  }, [userPickerOpen]);
+
+  function selectUser(u: BoardUser) {
+    setForm(f => ({ ...f, ownerId: u.id, owner: u.full_name, ownerPhone: u.phone, ownerTelegram: u.telegram }));
+    setUserSearch('');
+    setUserPickerOpen(false);
+    setErrors(e => ({ ...e, ownerId: undefined }));
+  }
+
+  const filteredUsers = users.filter(u => {
+    const q = userSearch.toLowerCase();
+    return !q || u.full_name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+  });
 
   function validate() {
     const e: Partial<Record<keyof FormState, string>> = {};
-    if (!form.name.trim())  e.name  = 'Required';
-    if (!form.owner.trim()) e.owner = 'Required';
-    if (!form.mc.trim())    e.mc    = 'Required';
-    if (!form.plan)         e.plan  = 'Required';
+    if (!form.name.trim())    e.name    = 'Required';
+    if (!form.ownerId.trim()) e.ownerId = 'Required';
+    if (!form.mc.trim())      e.mc      = 'Required';
+    if (!form.plan)           e.plan    = 'Required';
     return e;
   }
 
@@ -719,24 +768,26 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
   const labelStyle = { display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 4 } as const;
   const disabledInputStyle = { width: '100%', padding: '7px 11px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--muted-foreground)', backgroundColor: 'var(--muted)', outline: 'none', boxSizing: 'border-box' as const, opacity: 0.5, cursor: 'not-allowed' };
 
-  const field = (label: string, fkey: keyof FormState, type = 'text', placeholder = '') => (
+  const req = <span style={{ color: '#EF4444', marginLeft: 2 }}>*</span>;
+
+  const field = (label: string, fkey: keyof FormState, type = 'text', placeholder = '', required = false) => (
     <div>
-      <label style={labelStyle}>{label}</label>
+      <label style={labelStyle}>{label}{required && req}</label>
       <input type={type} value={form[fkey] as string} placeholder={placeholder} onChange={set(fkey)} style={inputStyle(fkey)} />
       {errors[fkey] && <span style={{ fontSize: '0.7rem', color: '#EF4444', marginTop: 2, display: 'block' }}>{errors[fkey]}</span>}
     </div>
   );
 
-  const selectField = (label: string, fkey: keyof FormState, options: string[]) => (
+  const selectField = (label: string, fkey: keyof FormState, options: string[], required = false) => (
     <div>
-      <label style={labelStyle}>{label}</label>
+      <label style={labelStyle}>{label}{required && req}</label>
       <CustomSelect value={form[fkey] as string} options={options} onChange={(v) => setForm(f => ({ ...f, [fkey]: v }))} />
     </div>
   );
 
-  const dateField = (label: string, fkey: keyof FormState) => (
+  const dateField = (label: string, fkey: keyof FormState, required = false) => (
     <div>
-      <label style={labelStyle}>{label}</label>
+      <label style={labelStyle}>{label}{required && req}</label>
       <DatePicker value={form[fkey] as string} onChange={(v) => setForm(f => ({ ...f, [fkey]: v }))} />
     </div>
   );
@@ -768,14 +819,71 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
           />
           <div style={{ borderTop: '1px solid var(--border)', marginBottom: 4 }} />
           <div className="grid grid-cols-2 gap-3">
-            {field('MC Number', 'mc', 'text', 'MC-000000')}
-            {field('Company Name', 'name', 'text', 'e.g. Acme Corp')}
+            {field('MC Number', 'mc', 'text', 'MC-000000', true)}
+            {field('Company Name', 'name', 'text', 'e.g. Acme Corp', true)}
           </div>
-          {field('Owner Name', 'owner', 'text', 'e.g. Jane Smith')}
-          <div className="grid grid-cols-2 gap-3">
-            {field('Owner Phone', 'ownerPhone', 'text', '+1 (555) 000-0000')}
-            {field('Owner Telegram', 'ownerTelegram', 'text', '@username')}
+          {/* Owner user picker */}
+          <div ref={userPickerRef} style={{ position: 'relative' }}>
+            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>Owner {req}</label>
+            <button type="button"
+              onClick={() => setUserPickerOpen(o => !o)}
+              style={{
+                width: '100%', padding: '7px 11px', borderRadius: 8, textAlign: 'left',
+                border: `1px solid ${errors.ownerId ? '#EF4444' : userPickerOpen ? '#93C5FD' : 'var(--border)'}`,
+                fontSize: '0.82rem', backgroundColor: 'var(--muted)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, outline: 'none',
+              }}>
+              {form.ownerId ? (
+                <span style={{ color: 'var(--foreground)', fontWeight: 500 }}>{form.owner}</span>
+              ) : (
+                <span style={{ color: 'var(--muted-foreground)' }}>Select a board user…</span>
+              )}
+              <ChevronDown size={13} style={{ flexShrink: 0, opacity: 0.5, transform: userPickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
+            </button>
+            {errors.ownerId && <span style={{ fontSize: '0.7rem', color: '#EF4444', marginTop: 2, display: 'block' }}>Required</span>}
+
+            {userPickerOpen && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
+                zIndex: 9999, backgroundColor: 'var(--card)', border: '1px solid var(--border)',
+                borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', overflow: 'hidden',
+              }}>
+                <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: 'var(--muted)', borderRadius: 7, padding: '5px 9px' }}>
+                    <Search size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+                    <input ref={userSearchRef} value={userSearch} onChange={e => setUserSearch(e.target.value)}
+                      placeholder="Search by name or email…"
+                      style={{ background: 'none', border: 'none', outline: 'none', fontSize: '0.8rem', color: 'var(--foreground)', width: '100%' }} />
+                  </div>
+                </div>
+                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  {filteredUsers.length === 0 ? (
+                    <div style={{ padding: '14px 12px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>
+                      {users.length === 0 ? 'Loading users…' : 'No users match'}
+                    </div>
+                  ) : filteredUsers.map(u => (
+                    <button key={u.id} type="button" onClick={() => selectUser(u)}
+                      style={{
+                        width: '100%', padding: '9px 12px', textAlign: 'left', border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        backgroundColor: u.id === form.ownerId ? '#EFF6FF' : 'transparent',
+                      }}
+                      onMouseEnter={e => { if (u.id !== form.ownerId) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
+                      onMouseLeave={e => { if (u.id !== form.ownerId) e.currentTarget.style.backgroundColor = 'transparent'; }}>
+                      <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, backgroundColor: colorFromStr(u.id) + '22', color: colorFromStr(u.id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700 }}>
+                        {u.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: u.id === form.ownerId ? '#2563EB' : 'var(--foreground)', lineHeight: 1.2 }}>{u.full_name}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
           {/* Login / Password — fields not yet handled by the backend */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -799,7 +907,7 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={labelStyle}>Plan</label>
+              <label style={labelStyle}>Plan {req}</label>
               <CustomSelect
                 value={form.plan}
                 options={PLAN_ENUM}
@@ -812,7 +920,7 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
                 }}
               />
             </div>
-            {dateField('Plan Expiry Date', 'planExpiry')}
+            {dateField('Plan Expiry Date', 'planExpiry', true)}
           </div>
           <div className="grid grid-cols-2 gap-3">
             {selectField('ELD Provider', 'eld', ELD_OPTIONS)}
@@ -866,6 +974,7 @@ export default function CompaniesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
   const [viewTarget,   setViewTarget]   = useState<Company | null>(null);
   const [deleting,     setDeleting]     = useState(false);
+  const [deleteError,  setDeleteError]  = useState<string | null>(null);
 
   const fetchCompanies = useCallback(async () => {
     setIsLoading(true);
@@ -938,11 +1047,18 @@ export default function CompaniesPage() {
 
   async function handleDelete(id: string) {
     setDeleting(true);
+    setDeleteError(null);
     try {
       await api.delete(`/companies/${id}`);
       setRows(prev => prev.filter(c => c.id !== id));
       setDeleteTarget(null);
       if (paginated.length === 1 && page > 1) setPage(p => p - 1);
+    } catch (err) {
+      if (err instanceof ApiException) {
+        setDeleteError(err.message || 'Failed to delete company.');
+      } else {
+        setDeleteError('Unable to connect to the server.');
+      }
     } finally {
       setDeleting(false);
     }
@@ -968,7 +1084,8 @@ export default function CompaniesPage() {
           mode="edit"
           plans={plans}
           initial={{
-            mc: editTarget.mc, name: editTarget.name, owner: editTarget.owner,
+            mc: editTarget.mc, name: editTarget.name,
+            ownerId: editTarget.ownerId ?? '', owner: editTarget.owner,
             ownerPhone: editTarget.ownerPhone, ownerTelegram: editTarget.ownerTelegram,
             plan: editTarget.plan, planExpiry: editTarget.planExpiry,
             status: editTarget.status, eld: editTarget.eld,
@@ -983,8 +1100,9 @@ export default function CompaniesPage() {
           title="Delete Company?"
           description={<>You are about to permanently delete <strong style={{ color: 'var(--foreground)' }}>{deleteTarget.name}</strong>. This cannot be undone.</>}
           onConfirm={() => handleDelete(deleteTarget.id)}
-          onCancel={() => setDeleteTarget(null)}
+          onCancel={() => { setDeleteTarget(null); setDeleteError(null); }}
           loading={deleting}
+          error={deleteError ?? undefined}
         />
       )}
 

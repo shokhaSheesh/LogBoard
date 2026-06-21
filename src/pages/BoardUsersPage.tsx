@@ -45,7 +45,6 @@ interface BoardUser {
 interface FormState {
   name: string;
   email: string;
-  companyId: string;
   role: string;
   status: Status;
   password: string;
@@ -173,11 +172,10 @@ function CompanySelect({ value, companies, onChange }: {
 // ── UserModal (Create / Edit) ─────────────────────────────────────────────────
 
 function UserModal({
-  mode, initial, companies, onClose, onSave,
+  mode, initial, onClose, onSave,
 }: {
   mode: 'create' | 'edit';
   initial: FormState;
-  companies: ApiCompany[];
   onClose: () => void;
   onSave: (f: FormState) => Promise<void>;
 }) {
@@ -250,11 +248,11 @@ function UserModal({
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '65vh', overflowY: 'auto' }}>
             <div>
-              <label style={lbl}>Full Name</label>
+              <label style={lbl}>Full Name <span style={{ color: '#EF4444' }}>*</span></label>
               <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="John Doe" style={inp} required disabled={saving} />
             </div>
             <div>
-              <label style={lbl}>Email</label>
+              <label style={lbl}>Email <span style={{ color: '#EF4444' }}>*</span></label>
               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="user@company.io" style={inp} required disabled={saving} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -268,15 +266,7 @@ function UserModal({
               </div>
             </div>
             <div>
-              <label style={lbl}>Company</label>
-              <CompanySelect
-                value={form.companyId}
-                companies={companies}
-                onChange={id => setForm(f => ({ ...f, companyId: id }))}
-              />
-            </div>
-            <div>
-              <label style={lbl}>Role</label>
+              <label style={lbl}>Role <span style={{ color: '#EF4444' }}>*</span></label>
               <div style={{ display: 'flex', gap: 6 }}>
                 {BOARD_ROLES.map(r => {
                   const s = ROLE_STYLE[r] ?? DEFAULT_ROLE_STYLE;
@@ -292,7 +282,7 @@ function UserModal({
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label style={lbl}>Password{mode === 'edit' && <span style={{ fontWeight: 400, marginLeft: 4 }}>(leave blank to keep)</span>}</label>
+                <label style={lbl}>Password {mode === 'create' && <span style={{ color: '#EF4444' }}>*</span>}{mode === 'edit' && <span style={{ fontWeight: 400, marginLeft: 4, color: 'var(--muted-foreground)' }}>(leave blank to keep)</span>}</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPass ? 'text' : 'password'}
@@ -451,7 +441,7 @@ const TABS: TabItem<TabId>[] = [
   { id: 'Suspended', label: 'Suspended' },
 ];
 
-const EMPTY_FORM: FormState = { name: '', email: '', companyId: '', role: 'owner', status: 'Active', password: '' };
+const EMPTY_FORM: FormState = { name: '', email: '', role: 'owner', status: 'Active', password: '' };
 
 export default function BoardUsersPage() {
   const [rows, setRows]                   = useState<BoardUser[]>([]);
@@ -517,7 +507,6 @@ export default function BoardUsersPage() {
       kind: 'board',
       full_name: f.name,
       email: f.email,
-      company_id: f.companyId,
       role: f.role,
       status: f.status,
       password: f.password,
@@ -531,7 +520,6 @@ export default function BoardUsersPage() {
     const payload: Record<string, unknown> = {
       full_name: f.name,
       email: f.email,
-      company_id: f.companyId,
       role: f.role,
       status: f.status,
     };
@@ -581,13 +569,12 @@ export default function BoardUsersPage() {
     <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
       {/* Modals */}
       {createOpen && (
-        <UserModal mode="create" initial={EMPTY_FORM} companies={companies} onClose={() => setCreateOpen(false)} onSave={handleCreate} />
+        <UserModal mode="create" initial={EMPTY_FORM} onClose={() => setCreateOpen(false)} onSave={handleCreate} />
       )}
       {editTarget && (
         <UserModal
           mode="edit"
-          initial={{ name: editTarget.name, email: editTarget.email, companyId: editTarget.companyId, role: editTarget.role, status: editTarget.status, password: '' }}
-          companies={companies}
+          initial={{ name: editTarget.name, email: editTarget.email, role: editTarget.role, status: editTarget.status, password: '' }}
           onClose={() => setEditTarget(null)}
           onSave={handleEdit}
         />

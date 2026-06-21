@@ -144,7 +144,7 @@ function PlanModal({
             {/* Name + Color */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'end' }}>
               <div>
-                <label style={labelStyle}>Plan Name</label>
+                <label style={labelStyle}>Plan Name <span style={{ color: '#EF4444' }}>*</span></label>
                 <input
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -154,7 +154,7 @@ function PlanModal({
                 />
               </div>
               <div>
-                <label style={labelStyle}>Color</label>
+                <label style={labelStyle}>Color <span style={{ color: '#EF4444' }}>*</span></label>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', height: 38 }}>
                   {COLOR_PRESETS.map(c => (
                     <button
@@ -198,9 +198,25 @@ function PlanModal({
                 <input type="number" min={0} value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="e.g. 149" style={inputStyle} required />
               </div>
               <div>
-                <label style={labelStyle}>Duration (days)</label>
+                <label style={labelStyle}>Duration (days) <span style={{ color: '#EF4444' }}>*</span></label>
                 <input type="number" min={1} value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} placeholder="e.g. 30" style={inputStyle} required />
               </div>
+            </div>
+
+            {/* Max Drivers — backend pending */}
+            <div>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                Max Drivers
+                <span style={{ fontSize: '0.62rem', fontWeight: 700, backgroundColor: '#FEF9C3', color: '#92400E', border: '1px solid #FDE68A', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.03em' }}>
+                  BACKEND PENDING
+                </span>
+              </label>
+              <input
+                disabled
+                type="number"
+                placeholder="e.g. 10  (leave empty for unlimited)"
+                style={{ ...inputStyle, opacity: 0.45, cursor: 'not-allowed', backgroundColor: 'var(--muted)' }}
+              />
             </div>
 
             {/* Features */}
@@ -420,6 +436,10 @@ export default function SubscriptionsPage() {
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', marginTop: 4 }}>
                   {plan.duration} day{plan.duration !== 1 ? 's' : ''} duration
+                </div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, backgroundColor: '#FEF9C3', border: '1px solid #FDE68A', borderRadius: 6, padding: '3px 8px' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#92400E' }}>Max drivers:</span>
+                  <span style={{ fontSize: '0.7rem', color: '#92400E', fontStyle: 'italic' }}>backend pending</span>
                 </div>
               </div>
 

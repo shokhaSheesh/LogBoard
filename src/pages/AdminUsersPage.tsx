@@ -218,7 +218,7 @@ function AdminModal({
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={lbl}>Full Name</label>
+              <label style={lbl}>Full Name <span style={{ color: '#EF4444' }}>*</span></label>
               <input
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -229,7 +229,7 @@ function AdminModal({
               />
             </div>
             <div>
-              <label style={lbl}>Email</label>
+              <label style={lbl}>Email <span style={{ color: '#EF4444' }}>*</span></label>
               <input
                 type="email"
                 value={form.email}
@@ -241,7 +241,7 @@ function AdminModal({
               />
             </div>
             <div>
-              <label style={lbl}>Role</label>
+              <label style={lbl}>Role <span style={{ color: '#EF4444' }}>*</span></label>
               <CustomSelect
                 value={form.role}
                 options={roles}
@@ -250,7 +250,7 @@ function AdminModal({
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label style={lbl}>Password{mode === 'edit' && <span style={{ fontWeight: 400, marginLeft: 4 }}>(leave blank to keep)</span>}</label>
+                <label style={lbl}>Password {mode === 'create' && <span style={{ color: '#EF4444' }}>*</span>}{mode === 'edit' && <span style={{ fontWeight: 400, marginLeft: 4, color: 'var(--muted-foreground)' }}>(leave blank to keep)</span>}</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPass ? 'text' : 'password'}

@@ -8,6 +8,7 @@ import SubscriptionsPage from '@/pages/SubscriptionsPage';
 import BoardUsersPage from '@/pages/BoardUsersPage';
 import AdminUsersPage from '@/pages/AdminUsersPage';
 import RolesPermissionsPage from '@/pages/RolesPermissionsPage';
+import PermissionModulesPage from '@/pages/PermissionModulesPage';
 
 function ProtectedRoute() {
   const { user, isLoading } = useAuth();
@@ -46,6 +47,7 @@ const router = createBrowserRouter([
           { path: 'board-users', element: <BoardUsersPage /> },
           { path: 'admin-users', element: <AdminUsersPage /> },
           { path: 'roles-permissions', element: <RolesPermissionsPage /> },
+          { path: 'permission-modules', element: <PermissionModulesPage /> },
         ],
       },
     ],

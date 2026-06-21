@@ -24,10 +24,13 @@ interface ApiRole {
   system: boolean;
 }
 
-interface ApiCatalog {
-  modules: { id: string; label: string }[];
+interface ApiModule {
+  id: string;
+  scope: string;
+  key: string;
+  label: string;
   actions: Action[];
-  permissions: string[];
+  system: boolean;
 }
 
 // ── Toggle Switch ─────────────────────────────────────────────────────────────
@@ -133,7 +136,7 @@ function AddRoleModal({
         <form onSubmit={handleSubmit} style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 5 }}>
-              Role Name
+              Role Name <span style={{ color: '#EF4444' }}>*</span>
             </label>
             <input
               value={name}
@@ -205,7 +208,7 @@ function AddRoleModal({
 
 export default function RolesPermissionsPage() {
   const [roles, setRoles]           = useState<Role[]>([]);
-  const [catalog, setCatalog]       = useState<ApiCatalog | null>(null);
+  const [modules, setModules]       = useState<ApiModule[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
   const [loadError, setLoadError]   = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState('');
@@ -228,11 +231,19 @@ export default function RolesPermissionsPage() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const [cat, roleList] = await Promise.all([
-        api.get<ApiCatalog>('/roles/permissions'),
+      type OldCatalog = { modules: { id: string; label: string }[]; actions: string[]; permissions: string[] };
+      const [raw, roleList] = await Promise.all([
+        api.get<ApiModule[] | OldCatalog>('/roles/permissions'),
         api.get<ApiRole[]>('/roles'),
       ]);
-      setCatalog(cat);
+      // Normalize: new API returns array, old returns { modules, actions, permissions }
+      const mods: ApiModule[] = Array.isArray(raw)
+        ? raw
+        : (raw as OldCatalog).modules.map(m => ({
+            id: m.id, scope: 'platform', key: m.id,
+            label: m.label, actions: (raw as OldCatalog).actions, system: true,
+          }));
+      setModules(mods);
       const uiRoles = roleList.map(toUIRole);
       serverRolesRef.current = uiRoles;
       setRoles(uiRoles);
@@ -246,10 +257,10 @@ export default function RolesPermissionsPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const modules = catalog?.modules ?? [];
-  const actions = catalog?.actions ?? [];
-
-  const allKeys: PermKey[] = modules.flatMap(m => actions.map(a => `${m.id}.${a}`));
+  // Unique actions across all modules, in canonical order
+  const ACTION_ORDER = ['read', 'create', 'update', 'delete'];
+  const allActions = ACTION_ORDER.filter(a => modules.some(m => m.actions.includes(a)));
+  const allKeys: PermKey[] = modules.flatMap(m => m.actions.map(a => `${m.key}.${a}`));
   const selected = roles.find(r => r.id === selectedId) ?? roles[0];
 
   function toggle(key: PermKey) {
@@ -263,8 +274,8 @@ export default function RolesPermissionsPage() {
     setSaveError(null);
   }
 
-  function toggleRow(moduleId: string) {
-    const rowKeys = actions.map(a => `${moduleId}.${a}`);
+  function toggleRow(mod: ApiModule) {
+    const rowKeys = mod.actions.map(a => `${mod.key}.${a}`);
     const allOn   = rowKeys.every(k => selected.permissions.has(k));
     setRoles(prev => prev.map(r => {
       if (r.id !== selectedId) return r;
@@ -527,7 +538,7 @@ export default function RolesPermissionsPage() {
                     <th style={{ padding: '10px 22px', textAlign: 'left', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
                       Module
                     </th>
-                    {actions.map(a => (
+                    {allActions.map(a => (
                       <th key={a} style={{ width: COL_W, padding: '10px 0', textAlign: 'center', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
                         {a.charAt(0).toUpperCase() + a.slice(1)}
                       </th>
@@ -542,7 +553,7 @@ export default function RolesPermissionsPage() {
                 </thead>
                 <tbody>
                   {modules.map((mod, ci) => {
-                    const rowKeys  = actions.map(a => `${mod.id}.${a}`);
+                    const rowKeys  = mod.actions.map(a => `${mod.key}.${a}`);
                     const rowAllOn = rowKeys.every(k => selected.permissions.has(k));
 
                     return (
@@ -555,23 +566,28 @@ export default function RolesPermissionsPage() {
                         <td style={{ padding: '16px 22px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)' }}>
                           {mod.label}
                         </td>
-                        {actions.map(action => {
-                          const key = `${mod.id}.${action}`;
+                        {allActions.map(action => {
+                          const key = `${mod.key}.${action}`;
+                          const hasAction = mod.actions.includes(action);
                           return (
                             <td key={action} style={{ width: COL_W, textAlign: 'center', padding: '16px 0' }}>
-                              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                <Toggle
-                                  checked={selected.permissions.has(key)}
-                                  onChange={selected.system ? () => {} : () => toggle(key)}
-                                />
-                              </div>
+                              {hasAction ? (
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                  <Toggle
+                                    checked={selected.permissions.has(key)}
+                                    onChange={selected.system ? () => {} : () => toggle(key)}
+                                  />
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>—</span>
+                              )}
                             </td>
                           );
                         })}
                         {!selected.system && (
                           <td style={{ width: 80, textAlign: 'center', padding: '16px 16px 16px 0' }}>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
-                              <Toggle checked={rowAllOn} onChange={() => toggleRow(mod.id)} />
+                              <Toggle checked={rowAllOn} onChange={() => toggleRow(mod)} />
                             </div>
                           </td>
                         )}

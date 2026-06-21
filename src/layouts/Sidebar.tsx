@@ -7,6 +7,7 @@ import {
   Users,
   ShieldCheck,
   Lock,
+  Layers,
   ChevronRight,
   Zap,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ const NAV_ITEMS: NavItemDef[] = [
   { path: '/admin/board-users',       label: 'Board Users',         icon: <Users size={18} /> },
   { path: '/admin/admin-users',       label: 'Admin Users',         icon: <ShieldCheck size={18} /> },
   { path: '/admin/roles-permissions', label: 'Roles & Permissions', icon: <Lock size={18} /> },
+  { path: '/admin/permission-modules', label: 'Perm. Modules',      icon: <Layers size={18} /> },
 ];
 
 function NavItem({ item, collapsed }: { item: NavItemDef; collapsed: boolean }) {
