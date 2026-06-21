@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Search, Plus, Pencil, Trash2, X, ShieldCheck, Eye, EyeOff, ChevronDown, Loader2 } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, X, ShieldCheck, Eye, EyeOff, ChevronDown, Loader2, Copy, Check } from 'lucide-react';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
 import { api, ApiException } from '@/lib/api';
@@ -144,6 +144,60 @@ function toUIUser(u: ApiUser): AdminUser {
     role: u.role,
     status: u.status,
   };
+}
+
+// ── CredsModal ────────────────────────────────────────────────────────────────
+
+function CredsModal({ name, email, password, onClose }: {
+  name: string; email: string; password: string; onClose: () => void;
+}) {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  function copy(text: string, key: string) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(key);
+    setTimeout(() => setCopied(null), 1800);
+  }
+
+  const row = (label: string, value: string, key: string) => (
+    <div style={{ backgroundColor: 'var(--muted)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>{label}</div>
+        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)', fontFamily: key === 'pass' ? 'monospace' : undefined, wordBreak: 'break-all' }}>{value}</div>
+      </div>
+      <button type="button" onClick={() => copy(value, key)}
+        style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: copied === key ? '#ECFDF5' : 'var(--background)', color: copied === key ? '#059669' : 'var(--muted-foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {copied === key ? <Check size={13} /> : <Copy size={13} />}
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 40 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 50, width: 420, backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+        <div style={{ padding: '28px 24px 20px', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#ECFDF5', border: '2px solid #A7F3D0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+            <Check size={22} color="#059669" />
+          </div>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>Admin Created</h2>
+          <p style={{ fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>
+            Save these credentials — the password won't be shown again.
+          </p>
+        </div>
+        <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {row('Name', name, 'name')}
+          {row('Email', email, 'email')}
+          {row('Password', password, 'pass')}
+        </div>
+        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)' }}>
+          <button onClick={onClose} style={{ width: '100%', height: 38, borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
+            Done
+          </button>
+        </div>
+      </div>
+    </>
+  );
 }
 
 // ── AdminModal (Create / Edit) ────────────────────────────────────────────────
@@ -398,6 +452,7 @@ export default function AdminUsersPage() {
   const [page, setPage]                 = useState(1);
 
   const [createOpen, setCreateOpen]     = useState(false);
+  const [createdCreds, setCreatedCreds] = useState<{ name: string; email: string; password: string } | null>(null);
   const [editTarget, setEditTarget]     = useState<AdminUser | null>(null);
   const [viewTarget, setViewTarget]     = useState<AdminUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -449,6 +504,7 @@ export default function AdminUsersPage() {
     });
     setRows(p => [toUIUser(created), ...p]);
     setCreateOpen(false);
+    setCreatedCreds({ name: created.full_name, email: created.email, password: f.password });
   }
 
   async function handleEdit(f: FormState): Promise<void> {
@@ -527,6 +583,8 @@ export default function AdminUsersPage() {
           loading={deleting}
         />
       )}
+
+      {createdCreds && <CredsModal {...createdCreds} onClose={() => setCreatedCreds(null)} />}
 
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
