@@ -25,6 +25,7 @@ interface ApiUser {
 interface ApiCompany {
   id: string;
   name: string;
+  owner_id: string;
 }
 
 interface BoardUser {
@@ -86,14 +87,15 @@ function roleLabel(slug: string): string {
 }
 
 function toUIUser(u: ApiUser, companies: ApiCompany[]): BoardUser {
+  const company = companies.find(c => c.owner_id === u.id) ?? companies.find(c => c.id === u.company_id);
   return {
     id: u.id,
     name: u.full_name,
     initials: toInitials(u.full_name),
     avatarColor: colorFromStr(u.id),
     email: u.email,
-    companyId: u.company_id,
-    companyName: companies.find(c => c.id === u.company_id)?.name ?? '—',
+    companyId: company?.id ?? u.company_id ?? '',
+    companyName: company?.name ?? '—',
     role: u.role,
     status: u.status,
     mustChangePassword: u.must_change_password,
