@@ -457,6 +457,7 @@ export default function AdminUsersPage() {
   const [roles, setRoles]               = useState<ApiRole[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
   const [loadError, setLoadError]       = useState<string | null>(null);
+  const [searchInput, setSearchInput]   = useState('');
   const [search, setSearch]             = useState('');
   const [roleFilter, setRoleFilter]     = useState<string>('all');
   const [page, setPage]                 = useState(1);
@@ -468,39 +469,37 @@ export default function AdminUsersPage() {
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [deleting, setDeleting]         = useState(false);
 
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // One-time roles fetch
+  useEffect(() => { api.get<ApiRole[]>('/roles').then(setRoles).catch(() => {}); }, []);
+
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const [users, roleList] = await Promise.all([
-        api.get<ApiUser[]>('/users?kind=admin'),
-        api.get<ApiRole[]>('/roles'),
-      ]);
+      const qs = new URLSearchParams({ kind: 'admin' });
+      if (search)            qs.set('search', search);
+      if (roleFilter !== 'all') qs.set('role', roleFilter);
+      const users = await api.get<ApiUser[]>(`/users?${qs.toString()}`);
       setRows(users.map(toUIUser));
-      setRoles(roleList);
     } catch (err) {
       setLoadError(err instanceof ApiException ? err.message : 'Failed to load admin users.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [search, roleFilter]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const filtered = useMemo(() => {
-    let r = rows;
-    if (roleFilter !== 'all') r = r.filter(u => u.role === roleFilter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      r = r.filter(u => u.name.toLowerCase().includes(q) || u.login.toLowerCase().includes(q));
-    }
-    return r;
-  }, [rows, search, roleFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const start      = filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const end        = Math.min(page * PER_PAGE, filtered.length);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
+  const paginated  = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const start      = rows.length === 0 ? 0 : (page - 1) * PER_PAGE + 1;
+  const end        = Math.min(page * PER_PAGE, rows.length);
   function goPage(p: number) { setPage(Math.min(Math.max(1, p), totalPages)); }
 
   async function handleCreate(f: FormState): Promise<void> {
@@ -638,7 +637,7 @@ export default function AdminUsersPage() {
         <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ position: 'relative', flex: 1, maxWidth: 260 }}>
             <Search size={14} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)', pointerEvents: 'none' }} />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search admins..." style={{ paddingLeft: 28, paddingRight: 10, height: 34, borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.8rem', outline: 'none', width: '100%' }} />
+            <input value={searchInput} onChange={e => setSearchInput(e.target.value)} placeholder="Search admins..." style={{ paddingLeft: 28, paddingRight: 10, height: 34, borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.8rem', outline: 'none', width: '100%' }} />
           </div>
           <Dropdown<string>
             label="Role"
@@ -731,7 +730,7 @@ export default function AdminUsersPage() {
         {/* Pagination */}
         {!isLoading && !loadError && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>Showing {start}–{end} of {filtered.length} admins</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>Showing {start}–{end} of {rows.length} admins</span>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               <button onClick={() => goPage(page - 1)} disabled={page === 1} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: page === 1 ? 'var(--muted-foreground)' : 'var(--foreground)', fontSize: '0.78rem', fontWeight: 500, cursor: page === 1 ? 'default' : 'pointer' }}>Prev</button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1).map((p, idx, arr) => (

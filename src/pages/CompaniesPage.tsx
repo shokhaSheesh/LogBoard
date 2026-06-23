@@ -958,11 +958,12 @@ export default function CompaniesPage() {
   const [plans, setPlans]               = useState<FetchedPlan[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
   const [loadError, setLoadError]       = useState('');
-  const [tab, setTab]                   = useState<TabId>('all');
-  const [search, setSearch]             = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | Status>('all');
-  const [planFilter,   setPlanFilter]   = useState<string>('all');
-  const [page, setPage]                 = useState(1);
+  const [tab, setTab]           = useState<TabId>('all');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch]     = useState('');
+  const [planFilter, setPlanFilter] = useState<string>('all');
+  const [page, setPage]         = useState(1);
+  const [allCounts, setAllCounts] = useState({ total: 0, active: 0, pending: 0, suspended: 0 });
 
   const [createOpen,   setCreateOpen]   = useState(false);
   const [editTarget,   setEditTarget]   = useState<Company | null>(null);
@@ -971,54 +972,54 @@ export default function CompaniesPage() {
   const [deleting,     setDeleting]     = useState(false);
   const [deleteError,  setDeleteError]  = useState<string | null>(null);
 
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // One-time: fetch plans + global stats (unaffected by filters)
+  useEffect(() => {
+    api.get<FetchedPlan[]>('/plans').then(setPlans).catch(() => {});
+    api.get<ApiCompany[]>('/companies').then(all => {
+      setAllCounts({
+        total: all.length,
+        active: all.filter(c => c.status === 'Active').length,
+        pending: all.filter(c => c.status === 'Pending').length,
+        suspended: all.filter(c => c.status === 'Suspended').length,
+      });
+    }).catch(() => {});
+  }, []);
+
   const fetchCompanies = useCallback(async () => {
     setIsLoading(true);
     setLoadError('');
     try {
-      const [companies, fetchedPlans] = await Promise.all([
-        api.get<ApiCompany[]>('/companies'),
-        api.get<FetchedPlan[]>('/plans'),
-      ]);
+      const qs = new URLSearchParams();
+      if (tab !== 'all') qs.set('status', tab);
+      if (search)        qs.set('search', search);
+      if (planFilter !== 'all') qs.set('plan', planFilter);
+      const q = qs.toString();
+      const companies = await api.get<ApiCompany[]>(`/companies${q ? `?${q}` : ''}`);
       setRows(companies.map(toUICompany));
-      setPlans(fetchedPlans);
     } catch {
       setLoadError('Failed to load companies. Please refresh.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [tab, search, planFilter]);
 
   useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
 
-  const totalCount     = rows.length;
-  const activeCount    = rows.filter(c => c.status === 'Active').length;
-  const pendingCount   = rows.filter(c => c.status === 'Pending').length;
-  const suspendedCount = rows.filter(c => c.status === 'Suspended').length;
+  const TABS: TabItem<TabId>[] = [
+    { id: 'all',       label: 'All',       count: allCounts.total,     icon: <Building2 size={13} />    },
+    { id: 'Active',    label: 'Active',    count: allCounts.active,    icon: <CheckCircle2 size={13} /> },
+    { id: 'Pending',   label: 'Pending',   count: allCounts.pending,   icon: <Clock size={13} />        },
+    { id: 'Suspended', label: 'Suspended', count: allCounts.suspended, icon: <XCircle size={13} />      },
+  ];
 
-  const TABS: TabItem<TabId>[] = useMemo(() => [
-    { id: 'all',       label: 'All',       count: totalCount,     icon: <Building2 size={13} />    },
-    { id: 'Active',    label: 'Active',    count: activeCount,    icon: <CheckCircle2 size={13} /> },
-    { id: 'Pending',   label: 'Pending',   count: pendingCount,   icon: <Clock size={13} />        },
-    { id: 'Suspended', label: 'Suspended', count: suspendedCount, icon: <XCircle size={13} />      },
-  ], [totalCount, activeCount, pendingCount, suspendedCount]);
-
-  const filtered = useMemo(() => rows.filter((c) => {
-    if (tab !== 'all' && c.status !== tab) return false;
-    if (statusFilter !== 'all' && c.status !== statusFilter) return false;
-    if (planFilter   !== 'all' && c.plan   !== planFilter)   return false;
-    if (search) {
-      const q = search.toLowerCase();
-      if (
-        !c.name.toLowerCase().includes(q) &&
-        !c.owner.toLowerCase().includes(q) &&
-        !c.mc.toLowerCase().includes(q)
-      ) return false;
-    }
-    return true;
-  }), [rows, tab, statusFilter, planFilter, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
+  const paginated  = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   function goPage(p: number) { setPage(Math.min(Math.max(1, p), totalPages)); }
 
@@ -1026,6 +1027,8 @@ export default function CompaniesPage() {
     const created = await api.post<ApiCompany>('/companies', toApiPayload(f));
     setRows(prev => [toUICompany(created), ...prev]);
     setCreateOpen(false);
+    const s = created.status.toLowerCase() as 'active' | 'pending' | 'suspended';
+    setAllCounts(c => ({ ...c, total: c.total + 1, [s]: c[s] + 1 }));
   }
 
   async function handleEdit(f: FormState): Promise<void> {
@@ -1044,9 +1047,14 @@ export default function CompaniesPage() {
     setDeleting(true);
     setDeleteError(null);
     try {
+      const target = rows.find(c => c.id === id);
       await api.delete(`/companies/${id}`);
       setRows(prev => prev.filter(c => c.id !== id));
       setDeleteTarget(null);
+      if (target) {
+        const s = target.status.toLowerCase() as 'active' | 'pending' | 'suspended';
+        setAllCounts(c => ({ ...c, total: Math.max(0, c.total - 1), [s]: Math.max(0, c[s] - 1) }));
+      }
       if (paginated.length === 1 && page > 1) setPage(p => p - 1);
     } catch (err) {
       if (err instanceof ApiException) {
@@ -1059,8 +1067,8 @@ export default function CompaniesPage() {
     }
   }
 
-  const start = filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const end   = Math.min(page * PER_PAGE, filtered.length);
+  const start = rows.length === 0 ? 0 : (page - 1) * PER_PAGE + 1;
+  const end   = Math.min(page * PER_PAGE, rows.length);
 
   const TH = ({ children }: { children: React.ReactNode }) => (
     <th style={{ textAlign: 'left', padding: '9px 14px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', letterSpacing: '0.07em', textTransform: 'uppercase', backgroundColor: 'var(--muted)', whiteSpace: 'nowrap' }}>
@@ -1104,9 +1112,9 @@ export default function CompaniesPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-4 mb-5">
         {[
-          { label: 'Total',     value: totalCount,     icon: <Building2 size={19} />,    iconBg: '#2563EB' },
-          { label: 'Active',    value: activeCount,    icon: <CheckCircle2 size={19} />, iconBg: '#10B981' },
-          { label: 'Suspended', value: suspendedCount, icon: <XCircle size={19} />,      iconBg: '#EF4444' },
+          { label: 'Total',     value: allCounts.total,     icon: <Building2 size={19} />,    iconBg: '#2563EB' },
+          { label: 'Active',    value: allCounts.active,    icon: <CheckCircle2 size={19} />, iconBg: '#10B981' },
+          { label: 'Suspended', value: allCounts.suspended, icon: <XCircle size={19} />,      iconBg: '#EF4444' },
         ].map(({ label, value, icon, iconBg }) => (
           <div key={label} style={{ backgroundColor: 'var(--card)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
             <div>
@@ -1152,13 +1160,12 @@ export default function CompaniesPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: 'var(--muted)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 12px', width: 220 }}>
               <Search size={14} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
               <input
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search companies..."
                 style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '0.8rem', color: 'var(--foreground)', width: '100%' }}
               />
             </div>
-            <Dropdown<'all' | Status> label="Status" options={STATUS_OPTS} value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} />
             <Dropdown<string> label="Plan" options={['all', ...plans.map(p => p.name)]} value={planFilter} onChange={(v) => { setPlanFilter(v); setPage(1); }} getOptionLabel={v => v === 'all' ? 'All Plans' : v} />
           </div>
         </div>
@@ -1290,7 +1297,7 @@ export default function CompaniesPage() {
         {!isLoading && !loadError && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
             <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>
-              Showing {start}–{end} of {filtered.length} companies
+              Showing {start}–{end} of {rows.length} companies
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <button

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, Plus, Pencil, Trash2, X, Users, Loader2, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
 import { Dropdown } from '@/components/shared/Dropdown';
@@ -461,6 +461,10 @@ export default function BoardUsersPage() {
   const [companyFilter, setCompanyFilter] = useState('all');
   const [roleFilter, setRoleFilter]       = useState('all');
   const [page, setPage]                   = useState(1);
+  const [allCounts, setAllCounts]         = useState({ total: 0, active: 0, suspended: 0 });
+
+  const [searchInput, setSearchInput]     = useState('');
+  const companiesRef                      = useRef<ApiCompany[]>([]);
 
   const [createOpen, setCreateOpen]       = useState(false);
   const [createdCreds, setCreatedCreds]   = useState<{ name: string; login: string; password: string } | null>(null);
@@ -471,22 +475,45 @@ export default function BoardUsersPage() {
   const [deleting, setDeleting]           = useState(false);
   const [deleteError, setDeleteError]     = useState<string | null>(null);
 
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // One-time: fetch companies for the filter dropdown + global stats
+  useEffect(() => {
+    Promise.all([
+      api.get<ApiCompany[]>('/companies'),
+      api.get<ApiUser[]>('/users?kind=board'),
+    ]).then(([cos, allUsers]) => {
+      companiesRef.current = cos;
+      setCompanies(cos);
+      setAllCounts({
+        total: allUsers.length,
+        active: allUsers.filter(u => u.status === 'Active').length,
+        suspended: allUsers.filter(u => u.status === 'Suspended').length,
+      });
+    }).catch(() => {});
+  }, []);
+
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const [users, cos] = await Promise.all([
-        api.get<ApiUser[]>('/users?kind=board'),
-        api.get<ApiCompany[]>('/companies'),
-      ]);
-      setCompanies(cos);
-      setRows(users.map(u => toUIUser(u, cos)));
+      const qs = new URLSearchParams({ kind: 'board' });
+      if (tab !== 'all')           qs.set('status', tab);
+      if (search)                  qs.set('search', search);
+      if (companyFilter !== 'all') qs.set('company_id', companyFilter);
+      if (roleFilter    !== 'all') qs.set('role', roleFilter);
+      const users = await api.get<ApiUser[]>(`/users?${qs.toString()}`);
+      setRows(users.map(u => toUIUser(u, companiesRef.current)));
     } catch (err) {
       setLoadError(err instanceof ApiException ? err.message : 'Failed to load board users.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [tab, search, companyFilter, roleFilter]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -494,7 +521,7 @@ export default function BoardUsersPage() {
     setEditingId(u.id);
     try {
       const full = await api.get<ApiUser>(`/users/${u.id}`);
-      setEditTarget(toUIUser(full, companies));
+      setEditTarget(toUIUser(full, companiesRef.current));
     } catch {
       setEditTarget(u);
     } finally {
@@ -506,30 +533,14 @@ export default function BoardUsersPage() {
     setViewTarget(u);
     try {
       const full = await api.get<ApiUser>(`/users/${u.id}`);
-      setViewTarget(prev => prev?.id === u.id ? toUIUser(full, companies) : prev);
+      setViewTarget(prev => prev?.id === u.id ? toUIUser(full, companiesRef.current) : prev);
     } catch { }
   }
 
-  const filtered = useMemo(() => {
-    let r = rows;
-    if (tab !== 'all')           r = r.filter(u => u.status === tab);
-    if (companyFilter !== 'all') r = r.filter(u => u.companyIds.includes(companyFilter));
-    if (roleFilter    !== 'all') r = r.filter(u => u.role   === roleFilter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      r = r.filter(u =>
-        u.name.toLowerCase().includes(q) ||
-        u.login.toLowerCase().includes(q) ||
-        u.companyNames.some(n => n.toLowerCase().includes(q))
-      );
-    }
-    return r;
-  }, [rows, tab, search, companyFilter, roleFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const start      = filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const end        = Math.min(page * PER_PAGE, filtered.length);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
+  const paginated  = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const start      = rows.length === 0 ? 0 : (page - 1) * PER_PAGE + 1;
+  const end        = Math.min(page * PER_PAGE, rows.length);
   function goPage(p: number) { setPage(Math.min(Math.max(1, p), totalPages)); }
 
   async function handleCreate(f: FormState): Promise<void> {
@@ -543,9 +554,11 @@ export default function BoardUsersPage() {
       phone: f.phone,
       telegram: f.telegram,
     });
-    setRows(p => [toUIUser(created, companies), ...p]);
+    setRows(p => [toUIUser(created, companiesRef.current), ...p]);
     setCreateOpen(false);
     setCreatedCreds({ name: created.full_name, login: created.login ?? f.email, password: f.password });
+    const s = created.status === 'Active' ? 'active' : 'suspended';
+    setAllCounts(c => ({ ...c, total: c.total + 1, [s]: c[s] + 1 }));
   }
 
   async function handleEdit(f: FormState): Promise<void> {
@@ -560,7 +573,7 @@ export default function BoardUsersPage() {
     };
     if (f.password.trim()) payload.password = f.password;
     const updated = await api.put<ApiUser>(`/users/${editTarget.id}`, payload);
-    setRows(p => p.map(u => u.id === editTarget.id ? toUIUser(updated, companies) : u));
+    setRows(p => p.map(u => u.id === editTarget.id ? toUIUser(updated, companiesRef.current) : u));
     setEditTarget(null);
   }
 
@@ -570,6 +583,8 @@ export default function BoardUsersPage() {
     setDeleteError(null);
     try {
       await api.delete(`/users/${deleteTarget.id}`);
+      const s = deleteTarget.status === 'Active' ? 'active' : 'suspended';
+      setAllCounts(c => ({ ...c, total: Math.max(0, c.total - 1), [s]: Math.max(0, c[s] - 1) }));
       setRows(p => p.filter(u => u.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (err) {
@@ -638,9 +653,9 @@ export default function BoardUsersPage() {
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
         {[
-          { label: 'Total',     value: rows.length,                                       iconBg: '#2563EB' },
-          { label: 'Active',    value: rows.filter(u => u.status === 'Active').length,    iconBg: '#10B981' },
-          { label: 'Suspended', value: rows.filter(u => u.status === 'Suspended').length, iconBg: '#EF4444' },
+          { label: 'Total',     value: allCounts.total,     iconBg: '#2563EB' },
+          { label: 'Active',    value: allCounts.active,    iconBg: '#10B981' },
+          { label: 'Suspended', value: allCounts.suspended, iconBg: '#EF4444' },
         ].map(({ label, value, iconBg }) => (
           <div key={label} style={{ backgroundColor: 'var(--card)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
             <div>
@@ -679,7 +694,7 @@ export default function BoardUsersPage() {
           <div style={{ flex: 1 }} />
           <div style={{ position: 'relative' }}>
             <Search size={14} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)', pointerEvents: 'none' }} />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search users..." style={{ paddingLeft: 28, paddingRight: 10, height: 34, borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.8rem', outline: 'none', width: 190 }} />
+            <input value={searchInput} onChange={e => setSearchInput(e.target.value)} placeholder="Search users..." style={{ paddingLeft: 28, paddingRight: 10, height: 34, borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.8rem', outline: 'none', width: 190 }} />
           </div>
           <Dropdown<string>
             label="Company"
@@ -795,7 +810,7 @@ export default function BoardUsersPage() {
         {/* Pagination */}
         {!isLoading && !loadError && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>Showing {start}–{end} of {filtered.length} users</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>Showing {start}–{end} of {rows.length} users</span>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               <button onClick={() => goPage(page - 1)} disabled={page === 1} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: page === 1 ? 'var(--muted-foreground)' : 'var(--foreground)', fontSize: '0.78rem', fontWeight: 500, cursor: page === 1 ? 'default' : 'pointer' }}>Prev</button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1).map((p, idx, arr) => (
