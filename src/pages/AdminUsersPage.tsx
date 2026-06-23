@@ -484,7 +484,7 @@ export default function AdminUsersPage() {
     setLoadError(null);
     try {
       const qs = new URLSearchParams({ kind: 'admin' });
-      if (search)            qs.set('search', search);
+      if (search)            qs.set('q', search);
       if (roleFilter !== 'all') qs.set('role', roleFilter);
       const users = await api.get<ApiUser[]>(`/users?${qs.toString()}`);
       setRows(users.map(toUIUser));
