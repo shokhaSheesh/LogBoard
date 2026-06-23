@@ -455,6 +455,7 @@ const EMPTY_FORM: FormState = { name: '', email: '', role: '', status: 'Active',
 export default function AdminUsersPage() {
   const [rows, setRows]                 = useState<AdminUser[]>([]);
   const [roles, setRoles]               = useState<ApiRole[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<ApiRole[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
   const [loadError, setLoadError]       = useState<string | null>(null);
   const [searchInput, setSearchInput]   = useState('');
@@ -495,6 +496,13 @@ export default function AdminUsersPage() {
   }, [search, roleFilter]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Derive available roles from actual users in current response (never collapses while a role is selected)
+  useEffect(() => {
+    if (roleFilter !== 'all') return;
+    const uniqueIds = new Set(rows.map(u => u.role).filter(Boolean));
+    setAvailableRoles(roles.filter(r => uniqueIds.has(r.id)));
+  }, [rows, roles, roleFilter]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
   const paginated  = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -545,7 +553,7 @@ export default function AdminUsersPage() {
   const defaultRole = roles[0]?.id ?? '';
   const roleFilterOptions = [
     { id: 'all', name: 'All Roles' },
-    ...roles.map(r => ({ id: r.id, name: r.name })),
+    ...availableRoles.map(r => ({ id: r.id, name: r.name })),
   ];
 
   const TH = ({ children, right }: { children: React.ReactNode; right?: boolean }) => (

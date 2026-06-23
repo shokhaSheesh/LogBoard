@@ -467,6 +467,7 @@ export default function BoardUsersPage() {
   const [roleFilter, setRoleFilter]       = useState('all');
   const [page, setPage]                   = useState(1);
   const [allCounts, setAllCounts]         = useState({ total: 0, active: 0, suspended: 0 });
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
   const [searchInput, setSearchInput]     = useState('');
   const companiesRef                      = useRef<ApiCompany[]>([]);
@@ -529,6 +530,11 @@ export default function BoardUsersPage() {
   }, [tab, search, companyFilter, roleFilter]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  useEffect(() => {
+    if (roleFilter !== 'all') return;
+    setAvailableRoles([...new Set(rows.map(u => u.role))].filter(Boolean).sort());
+  }, [rows, roleFilter]);
 
   async function openEdit(u: BoardUser) {
     setEditingId(u.id);
@@ -619,7 +625,7 @@ export default function BoardUsersPage() {
   ];
   const roleFilterOptions = [
     { id: 'all', name: 'All Roles' },
-    ...BOARD_ROLES.map(r => ({ id: r, name: roleLabel(r) })),
+    ...availableRoles.map(r => ({ id: r, name: roleLabel(r) })),
   ];
 
   const TH = ({ children, right }: { children: React.ReactNode; right?: boolean }) => (
