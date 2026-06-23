@@ -481,26 +481,17 @@ export default function BoardUsersPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // One-time: fetch companies for the filter dropdown + global stats
-  useEffect(() => {
-    Promise.all([
-      api.get<ApiCompany[]>('/companies'),
-      api.get<ApiUser[]>('/users?kind=board'),
-    ]).then(([cos, allUsers]) => {
-      companiesRef.current = cos;
-      setCompanies(cos);
-      setAllCounts({
-        total: allUsers.length,
-        active: allUsers.filter(u => u.status === 'Active').length,
-        suspended: allUsers.filter(u => u.status === 'Suspended').length,
-      });
-    }).catch(() => {});
-  }, []);
-
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
     try {
+      // Load companies once; keep them in ref so filter re-fetches don't need to repeat this
+      if (companiesRef.current.length === 0) {
+        const cos = await api.get<ApiCompany[]>('/companies');
+        companiesRef.current = cos;
+        setCompanies(cos);
+      }
+
       const qs = new URLSearchParams({ kind: 'board' });
       if (tab !== 'all')           qs.set('status', tab);
       if (search)                  qs.set('search', search);
@@ -508,6 +499,15 @@ export default function BoardUsersPage() {
       if (roleFilter    !== 'all') qs.set('role', roleFilter);
       const users = await api.get<ApiUser[]>(`/users?${qs.toString()}`);
       setRows(users.map(u => toUIUser(u, companiesRef.current)));
+
+      // Set global stat counts from the initial unfiltered fetch only
+      if (tab === 'all' && !search && companyFilter === 'all' && roleFilter === 'all') {
+        setAllCounts({
+          total: users.length,
+          active: users.filter(u => u.status === 'Active').length,
+          suspended: users.filter(u => u.status === 'Suspended').length,
+        });
+      }
     } catch (err) {
       setLoadError(err instanceof ApiException ? err.message : 'Failed to load board users.');
     } finally {

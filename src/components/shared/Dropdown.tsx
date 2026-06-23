@@ -41,7 +41,7 @@ export function Dropdown<T extends string>({
         }}
       >
         <SlidersHorizontal size={13} />
-        {isActive ? value : label}
+        {isActive ? resolveLabel(value) : label}
         <ChevronDown size={13} style={{ opacity: 0.6 }} />
       </button>
 
