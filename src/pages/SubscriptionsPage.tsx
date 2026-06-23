@@ -189,13 +189,18 @@ function SelectPicker({ value, options, placeholder, onChange }: {
   placeholder: string;
   onChange: (v: string) => void;
 }) {
-  const [open, setOpen]   = useState(false);
-  const [ready, setReady] = useState(false);
-  const trigRef           = useRef<HTMLButtonElement>(null);
-  const popRef            = useRef<HTMLDivElement>(null);
-  const [pos, setPos]     = useState({ top: 0, left: 0, width: 0 });
+  const [open, setOpen]       = useState(false);
+  const [ready, setReady]     = useState(false);
+  const [query, setQuery]     = useState('');
+  const trigRef               = useRef<HTMLButtonElement>(null);
+  const popRef                = useRef<HTMLDivElement>(null);
+  const searchRef             = useRef<HTMLInputElement>(null);
+  const [pos, setPos]         = useState({ top: 0, left: 0, width: 0 });
 
   const selectedLabel = options.find(o => o.value === value)?.label ?? '';
+  const filtered      = query.trim()
+    ? options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()))
+    : options;
 
   useEffect(() => {
     if (!open) return;
@@ -217,6 +222,12 @@ function SelectPicker({ value, options, placeholder, onChange }: {
     setReady(true);
   }, [open, ready]);
 
+  // Focus search when dropdown opens
+  useEffect(() => {
+    if (open) setTimeout(() => searchRef.current?.focus(), 60);
+    else setQuery('');
+  }, [open]);
+
   function toggle() {
     if (!open && trigRef.current) {
       const r = trigRef.current.getBoundingClientRect();
@@ -237,17 +248,32 @@ function SelectPicker({ value, options, placeholder, onChange }: {
         <ChevronDown size={13} style={{ flexShrink: 0, opacity: 0.5, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
       </button>
       {open && createPortal(
-        <div ref={popRef} style={{ position: 'fixed', top: pos.top, left: pos.left, width: Math.max(pos.width, 240), zIndex: 9999, backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', overflow: 'hidden', maxHeight: 240, overflowY: 'auto', opacity: ready ? 1 : 0, transition: 'opacity 80ms' }}>
-          {options.map(o => (
-            <button key={o.value} type="button" onClick={() => { onChange(o.value); setOpen(false); }}
-              style={{ width: '100%', padding: '9px 12px', textAlign: 'left', fontSize: '0.82rem', border: 'none', cursor: 'pointer', display: 'block', backgroundColor: o.value === value ? '#EFF6FF' : 'transparent', color: o.value === value ? '#2563EB' : 'var(--foreground)', fontWeight: o.value === value ? 600 : 400 }}
-              onMouseEnter={e => { if (o.value !== value) (e.currentTarget.style.backgroundColor = 'var(--muted)'); }}
-              onMouseLeave={e => { if (o.value !== value) (e.currentTarget.style.backgroundColor = 'transparent'); }}
-            >{o.label}</button>
-          ))}
-          {options.length === 0 && (
-            <div style={{ padding: '10px 12px', fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>No options available</div>
-          )}
+        <div ref={popRef} style={{ position: 'fixed', top: pos.top, left: pos.left, width: Math.max(pos.width, 260), zIndex: 9999, backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', overflow: 'hidden', opacity: ready ? 1 : 0, transition: 'opacity 80ms' }}>
+          {/* Search */}
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search…"
+              style={{ width: '100%', height: 32, padding: '0 10px', borderRadius: 6, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#93C5FD')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+            />
+          </div>
+          {/* Options */}
+          <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+            {filtered.map(o => (
+              <button key={o.value} type="button" onClick={() => { onChange(o.value); setOpen(false); }}
+                style={{ width: '100%', padding: '9px 12px', textAlign: 'left', fontSize: '0.82rem', border: 'none', cursor: 'pointer', display: 'block', backgroundColor: o.value === value ? '#EFF6FF' : 'transparent', color: o.value === value ? '#2563EB' : 'var(--foreground)', fontWeight: o.value === value ? 600 : 400 }}
+                onMouseEnter={e => { if (o.value !== value) (e.currentTarget.style.backgroundColor = 'var(--muted)'); }}
+                onMouseLeave={e => { if (o.value !== value) (e.currentTarget.style.backgroundColor = 'transparent'); }}
+              >{o.label}</button>
+            ))}
+            {filtered.length === 0 && (
+              <div style={{ padding: '10px 12px', fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>No results</div>
+            )}
+          </div>
         </div>,
         document.body
       )}
