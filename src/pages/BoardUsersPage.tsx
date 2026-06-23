@@ -498,30 +498,22 @@ export default function BoardUsersPage() {
         setCompanies(cos);
       }
 
-      // company_id backend filter doesn't work for owners (association is via companies.owner_id,
-      // not user.company_id), so omit it and apply client-side below
       const qs = new URLSearchParams({ kind: 'board' });
-      if (tab !== 'all')        qs.set('status', tab);
-      if (search)               qs.set('search', search);
-      if (roleFilter !== 'all') qs.set('role', roleFilter);
+      if (tab !== 'all')           qs.set('status', tab);
+      if (search)                  qs.set('q', search);
+      if (roleFilter !== 'all')    qs.set('role', roleFilter);
+      if (companyFilter !== 'all') qs.set('company_id', companyFilter);
 
       const body = await api.getBody<ApiUsersBody>(`/users?${qs.toString()}`);
       const users = body.data ?? [];
 
-      // Stats come from the backend response
       setAllCounts({
-        total: body.stats?.total ?? users.length,
-        active: body.stats?.active ?? users.filter(u => u.status === 'Active').length,
+        total:     body.stats?.total     ?? users.length,
+        active:    body.stats?.active    ?? users.filter(u => u.status === 'Active').length,
         suspended: body.stats?.suspended ?? users.filter(u => u.status === 'Suspended').length,
       });
 
-      // Company filter: client-side — owners link via companies.owner_id, not user.company_id
-      const co = companiesRef.current.find(c => c.id === companyFilter);
-      const displayed = companyFilter === 'all' || !co
-        ? users
-        : users.filter(u => u.id === co.owner_id || u.company_id === co.id);
-
-      setRows(displayed.map(u => toUIUser(u, companiesRef.current)));
+      setRows(users.map(u => toUIUser(u, companiesRef.current)));
     } catch (err) {
       setLoadError(err instanceof ApiException ? err.message : 'Failed to load board users.');
     } finally {
