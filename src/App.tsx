@@ -9,11 +9,14 @@ import BoardUsersPage from '@/pages/BoardUsersPage';
 import AdminUsersPage from '@/pages/AdminUsersPage';
 import RolesPermissionsPage from '@/pages/RolesPermissionsPage';
 import PermissionModulesPage from '@/pages/PermissionModulesPage';
+import ChangePasswordPage from '@/pages/ChangePasswordPage';
 
 function ProtectedRoute() {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
-  return user ? <Outlet /> : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.must_change_password) return <Navigate to="/change-password" replace />;
+  return <Outlet />;
 }
 
 function PublicRoute() {
@@ -32,6 +35,10 @@ const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
     ],
+  },
+  {
+    path: '/change-password',
+    element: <ChangePasswordPasswordGuard />,
   },
   {
     element: <ProtectedRoute />,
@@ -53,6 +60,14 @@ const router = createBrowserRouter([
     ],
   },
 ]);
+
+function ChangePasswordPasswordGuard() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.must_change_password) return <Navigate to="/admin/dashboard" replace />;
+  return <ChangePasswordPage />;
+}
 
 export default function App() {
   return (

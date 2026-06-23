@@ -219,18 +219,8 @@ export default function PermissionModulesPage() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      // /catalog/modules not yet deployed — fall back to /roles/permissions
-      type OldCatalog = { modules: { id: string; label: string }[]; actions: string[] };
-      const raw = await api.get<ApiModule[] | OldCatalog>('/roles/permissions');
-      if (Array.isArray(raw)) {
-        setModules(raw);
-      } else {
-        const old = raw as OldCatalog;
-        setModules(old.modules.map(m => ({
-          id: m.id, scope: 'platform' as Scope, key: m.id,
-          label: m.label, actions: old.actions, system: true,
-        })));
-      }
+      const raw = await api.get<{ platform: ApiModule[]; company: ApiModule[] }>('/catalog');
+      setModules([...raw.platform, ...raw.company]);
     } catch (err) {
       setLoadError(err instanceof ApiException ? err.message : 'Failed to load modules.');
     } finally {
@@ -242,8 +232,6 @@ export default function PermissionModulesPage() {
 
   const filtered = tab === 'all' ? modules : modules.filter(m => m.scope === tab);
 
-  // /catalog/modules write endpoints not yet deployed — handlers are wired
-  // and will work once the backend ships them
   async function handleCreate(f: FormState): Promise<void> {
     const created = await api.post<ApiModule>('/catalog/modules', {
       scope: f.scope, key: f.key, label: f.label, actions: f.actions,
@@ -299,18 +287,12 @@ export default function PermissionModulesPage() {
             Define custom permission modules for platform and company roles
           </p>
         </div>
-        <button disabled title="Create / Edit / Delete modules — backend pending"
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'not-allowed', background: 'var(--muted)', border: '1px solid var(--border)', color: 'var(--muted-foreground)', fontSize: '0.82rem', fontWeight: 600, opacity: 0.6 }}>
+        <button onClick={() => setCreateOpen(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}>
           <Plus size={15} /> Create Module
         </button>
-      </div>
-
-      {/* Backend pending notice */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 14px', marginBottom: 20 }}>
-        <span style={{ fontSize: '0.72rem', fontWeight: 700, backgroundColor: '#F59E0B', color: '#fff', padding: '2px 8px', borderRadius: 99, flexShrink: 0 }}>BACKEND PENDING</span>
-        <span style={{ fontSize: '0.8rem', color: '#92400E' }}>
-          The <code style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>/catalog/modules</code> API is not yet deployed. Showing read-only data from <code style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>/roles/permissions</code>. Create, Edit, and Delete will be enabled once the backend ships.
-        </span>
       </div>
 
       {/* Stat cards */}
@@ -408,15 +390,20 @@ export default function PermissionModulesPage() {
                         }
                       </td>
 
-                      {/* Edit / Delete — disabled until /catalog/modules is deployed */}
+                      {/* Edit / Delete */}
                       <td style={{ padding: '13px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                          <button disabled title="Edit — backend pending"
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'transparent', color: 'var(--muted-foreground)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35 }}>
+                          <button onClick={() => setEditTarget(m)} title="Edit module"
+                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'transparent', color: 'var(--muted-foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--muted)'; e.currentTarget.style.color = 'var(--foreground)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; }}>
                             <Pencil size={13} />
                           </button>
-                          <button disabled title="Delete — backend pending"
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'transparent', color: 'var(--muted-foreground)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35 }}>
+                          <button onClick={() => { setDeleteTarget(m); setDeleteError(null); }} title="Delete module"
+                            disabled={m.system}
+                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'transparent', color: 'var(--muted-foreground)', cursor: m.system ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: m.system ? 0.35 : 1 }}
+                            onMouseEnter={e => { if (!m.system) { e.currentTarget.style.backgroundColor = '#FEF2F2'; e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.borderColor = '#FECACA'; } }}
+                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
                             <Trash2 size={13} />
                           </button>
                         </div>

@@ -73,6 +73,7 @@ type Status = 'Active' | 'Suspended';
 interface ApiUser {
   id: string;
   kind: string;
+  login: string;
   email: string;
   full_name: string;
   role: string;
@@ -90,8 +91,9 @@ interface AdminUser {
   name: string;
   initials: string;
   avatarColor: string;
+  login: string;
   email: string;
-  role: string; // role slug
+  role: string;
   status: Status;
 }
 
@@ -140,7 +142,8 @@ function toUIUser(u: ApiUser): AdminUser {
     name: u.full_name,
     initials: toInitials(u.full_name),
     avatarColor: colorFromStr(u.id),
-    email: u.email,
+    login: u.login ?? u.email,
+    email: u.email ?? '',
     role: u.role,
     status: u.status,
   };
@@ -148,8 +151,8 @@ function toUIUser(u: ApiUser): AdminUser {
 
 // ── CredsModal ────────────────────────────────────────────────────────────────
 
-function CredsModal({ name, email, password, onClose }: {
-  name: string; email: string; password: string; onClose: () => void;
+function CredsModal({ name, login, password, onClose }: {
+  name: string; login: string; password: string; onClose: () => void;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -187,7 +190,7 @@ function CredsModal({ name, email, password, onClose }: {
         </div>
         <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {row('Name', name, 'name')}
-          {row('Email', email, 'email')}
+          {row('Login', login, 'login')}
           {row('Password', password, 'pass')}
         </div>
         <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)' }}>
@@ -229,14 +232,20 @@ function AdminModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (mode === 'create' && !form.password.trim()) return;
+    if (form.password.trim() && form.password.trim().length < 8) {
+      setServerError('Password must be at least 8 characters.');
+      return;
+    }
     setSaving(true);
     setServerError('');
     try {
       await onSave(form);
     } catch (err) {
       if (err instanceof ApiException) {
-        if (err.code === 'email_taken') {
-          setServerError('This email is already in use.');
+        if (err.code === 'email_taken' || err.code === 'login_taken') {
+          setServerError('This login is already in use.');
+        } else if (err.code === 'password_too_short' || (err.code === 'invalid_request' && err.message.toLowerCase().includes('password'))) {
+          setServerError('Password must be at least 8 characters.');
         } else {
           setServerError(err.message || 'Something went wrong.');
         }
@@ -283,9 +292,9 @@ function AdminModal({
               />
             </div>
             <div>
-              <label style={lbl}>Email <span style={{ color: '#EF4444' }}>*</span></label>
+              <label style={lbl}>Login <span style={{ color: '#EF4444' }}>*</span></label>
               <input
-                type="email"
+                type="text"
                 value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="admin@fleetadmin.io"
@@ -319,6 +328,7 @@ function AdminModal({
                     {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
+                <p style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginTop: 4 }}>Min 8 characters</p>
               </div>
               <div>
                 <label style={lbl}>Status</label>
@@ -419,7 +429,7 @@ function AdminDetailModal({
           <Field label="User ID" value={user.id} mono />
           <Field label="Status"  value={user.status} />
           <div style={{ gridColumn: '1 / -1' }}>
-            <Field label="Email" value={user.email} mono />
+            <Field label="Login" value={user.login} mono />
           </div>
         </div>
 
@@ -452,7 +462,7 @@ export default function AdminUsersPage() {
   const [page, setPage]                 = useState(1);
 
   const [createOpen, setCreateOpen]     = useState(false);
-  const [createdCreds, setCreatedCreds] = useState<{ name: string; email: string; password: string } | null>(null);
+  const [createdCreds, setCreatedCreds] = useState<{ name: string; login: string; password: string } | null>(null);
   const [editTarget, setEditTarget]     = useState<AdminUser | null>(null);
   const [viewTarget, setViewTarget]     = useState<AdminUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -482,7 +492,7 @@ export default function AdminUsersPage() {
     if (roleFilter !== 'all') r = r.filter(u => u.role === roleFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
-      r = r.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+      r = r.filter(u => u.name.toLowerCase().includes(q) || u.login.toLowerCase().includes(q));
     }
     return r;
   }, [rows, search, roleFilter]);
@@ -497,21 +507,21 @@ export default function AdminUsersPage() {
     const created = await api.post<ApiUser>('/users', {
       kind: 'admin',
       full_name: f.name,
-      email: f.email,
+      login: f.email,
       role: f.role,
       status: f.status,
       password: f.password,
     });
     setRows(p => [toUIUser(created), ...p]);
     setCreateOpen(false);
-    setCreatedCreds({ name: created.full_name, email: created.email, password: f.password });
+    setCreatedCreds({ name: created.full_name, login: created.login ?? f.email, password: f.password });
   }
 
   async function handleEdit(f: FormState): Promise<void> {
     if (!editTarget) return;
     const payload: Record<string, unknown> = {
       full_name: f.name,
-      email: f.email,
+      login: f.email,
       role: f.role,
       status: f.status,
     };
@@ -560,7 +570,7 @@ export default function AdminUsersPage() {
       {editTarget && (
         <AdminModal
           mode="edit"
-          initial={{ name: editTarget.name, email: editTarget.email, role: editTarget.role, status: editTarget.status, password: '' }}
+          initial={{ name: editTarget.name, email: editTarget.login, role: editTarget.role, status: editTarget.status, password: '' }}
           roles={roles}
           onClose={() => setEditTarget(null)}
           onSave={handleEdit}
@@ -681,7 +691,7 @@ export default function AdminUsersPage() {
                           </div>
                         </button>
                       </td>
-                      <td style={{ padding: '11px 14px' }}><span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', fontFamily: 'monospace' }}>{u.email}</span></td>
+                      <td style={{ padding: '11px 14px' }}><span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', fontFamily: 'monospace' }}>{u.login}</span></td>
                       <td style={{ padding: '11px 14px' }}>
                         <span style={{ display: 'inline-block', backgroundColor: rs.bg, color: rs.color, border: `1px solid ${rs.border}`, fontSize: '0.7rem', fontWeight: 700, padding: '3px 9px', borderRadius: 99 }}>{roleName}</span>
                       </td>

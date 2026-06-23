@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Search, Plus, Pencil, Trash2, X, Users, ChevronDown, Loader2, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Search, Plus, Pencil, Trash2, X, Users, Loader2, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
@@ -12,6 +12,7 @@ type Status = 'Active' | 'Suspended';
 interface ApiUser {
   id: string;
   kind: string;
+  login: string;
   email: string;
   full_name: string;
   role: string;
@@ -20,6 +21,8 @@ interface ApiUser {
   must_change_password: boolean;
   phone: string;
   telegram: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ApiCompany {
@@ -33,19 +36,24 @@ interface BoardUser {
   name: string;
   initials: string;
   avatarColor: string;
+  login: string;
   email: string;
-  companyId: string;
-  companyName: string;
+  companyIds: string[];
+  companyNames: string[];
   role: string;
   status: Status;
   mustChangePassword: boolean;
   phone: string;
   telegram: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface FormState {
   name: string;
   email: string;
+  phone: string;
+  telegram: string;
   role: string;
   status: Status;
   password: string;
@@ -86,95 +94,43 @@ function roleLabel(slug: string): string {
   return slug.charAt(0).toUpperCase() + slug.slice(1);
 }
 
+function formatDate(iso: string): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
 function toUIUser(u: ApiUser, companies: ApiCompany[]): BoardUser {
-  const company = companies.find(c => c.owner_id === u.id) ?? companies.find(c => c.id === u.company_id);
+  const owned = companies.filter(c => c.owner_id === u.id);
+  if (owned.length === 0 && u.company_id) {
+    const co = companies.find(c => c.id === u.company_id);
+    if (co) owned.push(co);
+  }
   return {
     id: u.id,
     name: u.full_name,
     initials: toInitials(u.full_name),
     avatarColor: colorFromStr(u.id),
-    email: u.email,
-    companyId: company?.id ?? u.company_id ?? '',
-    companyName: company?.name ?? '—',
+    login: u.login ?? u.email,
+    email: u.email ?? '',
+    companyIds: owned.map(c => c.id),
+    companyNames: owned.map(c => c.name),
     role: u.role,
     status: u.status,
     mustChangePassword: u.must_change_password,
     phone: u.phone ?? '',
     telegram: u.telegram ?? '',
+    createdAt: u.created_at ?? '',
+    updatedAt: u.updated_at ?? '',
   };
-}
-
-// ── CompanySelect ─────────────────────────────────────────────────────────────
-
-function CompanySelect({ value, companies, onChange }: {
-  value: string;
-  companies: ApiCompany[];
-  onChange: (id: string) => void;
-}) {
-  const [open, setOpen]   = useState(false);
-  const containerRef      = useRef<HTMLDivElement>(null);
-  const display           = companies.find(c => c.id === value)?.name ?? 'Select company…';
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [open]);
-
-  const inp: React.CSSProperties = {
-    width: '100%', height: 38, padding: '0 11px', borderRadius: 8,
-    border: `1px solid ${open ? '#93C5FD' : 'var(--border)'}`,
-    fontSize: '0.83rem', color: value ? 'var(--foreground)' : 'var(--muted-foreground)',
-    backgroundColor: 'var(--background)', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    gap: 6, outline: 'none', boxSizing: 'border-box',
-  };
-
-  return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
-      <button type="button" onClick={() => setOpen(o => !o)} style={inp}
-        onMouseEnter={e => { if (!open) e.currentTarget.style.borderColor = '#93C5FD'; }}
-        onMouseLeave={e => { if (!open) e.currentTarget.style.borderColor = 'var(--border)'; }}
-      >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
-        <ChevronDown size={13} style={{ flexShrink: 0, opacity: 0.5, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
-      </button>
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 100,
-          backgroundColor: 'var(--card)', border: '1px solid var(--border)',
-          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
-          overflow: 'hidden', maxHeight: 220, overflowY: 'auto',
-        }}>
-          {companies.length === 0 && (
-            <div style={{ padding: '10px 12px', fontSize: '0.82rem', color: 'var(--muted-foreground)' }}>No companies available</div>
-          )}
-          {companies.map(c => (
-            <button key={c.id} type="button" onClick={() => { onChange(c.id); setOpen(false); }}
-              style={{
-                width: '100%', padding: '8px 12px', textAlign: 'left', fontSize: '0.82rem',
-                border: 'none', cursor: 'pointer', display: 'block',
-                backgroundColor: c.id === value ? '#EFF6FF' : 'transparent',
-                color: c.id === value ? '#2563EB' : 'var(--foreground)',
-                fontWeight: c.id === value ? 600 : 400,
-              }}
-              onMouseEnter={e => { if (c.id !== value) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
-              onMouseLeave={e => { if (c.id !== value) e.currentTarget.style.backgroundColor = 'transparent'; }}
-            >{c.name}</button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ── CredsModal ────────────────────────────────────────────────────────────────
 
-function CredsModal({ name, email, password, onClose }: {
-  name: string; email: string; password: string; onClose: () => void;
+function CredsModal({ name, login, password, onClose }: {
+  name: string; login: string; password: string; onClose: () => void;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -212,7 +168,7 @@ function CredsModal({ name, email, password, onClose }: {
         </div>
         <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {row('Name', name, 'name')}
-          {row('Email', email, 'email')}
+          {row('Login', login, 'login')}
           {row('Password', password, 'pass')}
         </div>
         <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)' }}>
@@ -249,26 +205,24 @@ function UserModal({
     display: 'block', fontSize: '0.75rem', fontWeight: 600,
     color: 'var(--muted-foreground)', marginBottom: 5,
   };
-  const pendingBadge = (
-    <span style={{ fontSize: '0.62rem', fontWeight: 700, backgroundColor: '#FEF9C3', color: '#92400E', border: '1px solid #FDE68A', borderRadius: 4, padding: '1px 6px', marginLeft: 6, letterSpacing: '0.03em' }}>
-      BACKEND PENDING
-    </span>
-  );
-  const disabledInp: React.CSSProperties = { ...inp, opacity: 0.45, cursor: 'not-allowed', backgroundColor: 'var(--muted)' };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (mode === 'create' && !form.password.trim()) return;
+    if (form.password.trim() && form.password.trim().length < 8) {
+      setServerError('Password must be at least 8 characters.');
+      return;
+    }
     setSaving(true);
     setServerError('');
     try {
       await onSave(form);
     } catch (err) {
       if (err instanceof ApiException) {
-        if (err.code === 'email_taken') {
-          setServerError('This email is already in use.');
-        } else if (err.code === 'company_required') {
-          setServerError('Please select a company.');
+        if (err.code === 'login_taken' || err.code === 'email_taken') {
+          setServerError('This login is already in use.');
+        } else if (err.code === 'password_too_short' || (err.code === 'invalid_request' && err.message.toLowerCase().includes('password'))) {
+          setServerError('Password must be at least 8 characters.');
         } else {
           setServerError(err.message || 'Something went wrong.');
         }
@@ -308,17 +262,17 @@ function UserModal({
               <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="John Doe" style={inp} required disabled={saving} />
             </div>
             <div>
-              <label style={lbl}>Email <span style={{ color: '#EF4444' }}>*</span></label>
-              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="user@company.io" style={inp} required disabled={saving} />
+              <label style={lbl}>Login <span style={{ color: '#EF4444' }}>*</span></label>
+              <input type="text" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="user@company.io" style={inp} required disabled={saving} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label style={{ ...lbl, display: 'flex', alignItems: 'center' }}>Phone {pendingBadge}</label>
-                <input disabled placeholder="+1 (555) 000-0000" style={disabledInp} />
+                <label style={lbl}>Phone</label>
+                <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 (555) 000-0000" style={inp} disabled={saving} />
               </div>
               <div>
-                <label style={{ ...lbl, display: 'flex', alignItems: 'center' }}>Telegram {pendingBadge}</label>
-                <input disabled placeholder="@username" style={disabledInp} />
+                <label style={lbl}>Telegram</label>
+                <input value={form.telegram} onChange={e => setForm(f => ({ ...f, telegram: e.target.value }))} placeholder="@username" style={inp} disabled={saving} />
               </div>
             </div>
             {mode === 'edit' && (
@@ -349,6 +303,7 @@ function UserModal({
                     {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
+                <p style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginTop: 4 }}>Min 8 characters</p>
               </div>
               <div>
                 <label style={lbl}>Status</label>
@@ -395,7 +350,7 @@ function UserModal({
 
 // ── UserDetailModal ───────────────────────────────────────────────────────────
 
-function UserDetailModal({ user, onClose, onEdit }: { user: BoardUser; onClose: () => void; onEdit: () => void }) {
+function UserDetailModal({ user, onClose, onEdit, editLoading }: { user: BoardUser; onClose: () => void; onEdit: () => void; editLoading?: boolean }) {
   const rs = ROLE_STYLE[user.role] ?? DEFAULT_ROLE_STYLE;
   const ss = STATUS_CONFIG[user.status];
 
@@ -442,30 +397,30 @@ function UserDetailModal({ user, onClose, onEdit }: { user: BoardUser; onClose: 
         </div>
 
         <div style={{ padding: '20px 22px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-          <Field label="User ID"  value={user.id} mono />
-          <Field label="Status"   value={user.status} />
           <div style={{ gridColumn: '1 / -1' }}>
-            <Field label="Email" value={user.email} mono />
+            <Field label="Login" value={user.login} mono />
           </div>
+          {user.email && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <Field label="Email" value={user.email} mono />
+            </div>
+          )}
           <div style={{ gridColumn: '1 / -1' }}>
-            <Field label="Company" value={user.companyName} />
+            <Field label={`Compan${user.companyNames.length === 1 ? 'y' : 'ies'}`} value={
+              user.companyNames.length === 0 ? '—' :
+              user.companyNames.length === 1 ? user.companyNames[0] :
+              <ul style={{ margin: 0, padding: '0 0 0 16px', listStyle: 'disc', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {user.companyNames.map((n, i) => <li key={i}>{n}</li>)}
+              </ul>
+            } />
           </div>
-          <Field
-            label="Phone"
-            value={
-              user.phone
-                ? user.phone
-                : <span style={{ color: 'var(--muted-foreground)', fontSize: '0.78rem', fontStyle: 'italic' }}>Backend pending</span>
-            }
-          />
-          <Field
-            label="Telegram"
-            value={
-              user.telegram
-                ? user.telegram
-                : <span style={{ color: 'var(--muted-foreground)', fontSize: '0.78rem', fontStyle: 'italic' }}>Backend pending</span>
-            }
-          />
+          <Field label="Phone"    value={user.phone    || '—'} />
+          <Field label="Telegram" value={user.telegram || '—'} />
+          <Field label="Created"  value={formatDate(user.createdAt)} />
+          <Field label="Updated"  value={formatDate(user.updatedAt)} />
+          <div style={{ gridColumn: '1 / -1' }}>
+            <Field label="User ID" value={user.id} mono />
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 8, padding: '14px 22px', borderTop: '1px solid var(--border)' }}>
@@ -474,8 +429,9 @@ function UserDetailModal({ user, onClose, onEdit }: { user: BoardUser; onClose: 
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
             Close
           </button>
-          <button onClick={onEdit} style={{ flex: 2, height: 38, borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
-            Edit User
+          <button onClick={onEdit} disabled={editLoading} style={{ flex: 2, height: 38, borderRadius: 8, cursor: editLoading ? 'not-allowed' : 'pointer', background: editLoading ? 'var(--muted)' : 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: editLoading ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {editLoading && <Loader2 size={14} className="animate-spin" />}
+            {editLoading ? 'Loading…' : 'Edit User'}
           </button>
         </div>
       </div>
@@ -493,7 +449,7 @@ const TABS: TabItem<TabId>[] = [
   { id: 'Suspended', label: 'Suspended' },
 ];
 
-const EMPTY_FORM: FormState = { name: '', email: '', role: 'owner', status: 'Active', password: '' };
+const EMPTY_FORM: FormState = { name: '', email: '', phone: '', telegram: '', role: 'owner', status: 'Active', password: '' };
 
 export default function BoardUsersPage() {
   const [rows, setRows]                   = useState<BoardUser[]>([]);
@@ -507,8 +463,9 @@ export default function BoardUsersPage() {
   const [page, setPage]                   = useState(1);
 
   const [createOpen, setCreateOpen]       = useState(false);
-  const [createdCreds, setCreatedCreds]   = useState<{ name: string; email: string; password: string } | null>(null);
+  const [createdCreds, setCreatedCreds]   = useState<{ name: string; login: string; password: string } | null>(null);
   const [editTarget, setEditTarget]       = useState<BoardUser | null>(null);
+  const [editingId, setEditingId]         = useState<string | null>(null);
   const [viewTarget, setViewTarget]       = useState<BoardUser | null>(null);
   const [deleteTarget, setDeleteTarget]   = useState<BoardUser | null>(null);
   const [deleting, setDeleting]           = useState(false);
@@ -533,17 +490,37 @@ export default function BoardUsersPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  async function openEdit(u: BoardUser) {
+    setEditingId(u.id);
+    try {
+      const full = await api.get<ApiUser>(`/users/${u.id}`);
+      setEditTarget(toUIUser(full, companies));
+    } catch {
+      setEditTarget(u);
+    } finally {
+      setEditingId(null);
+    }
+  }
+
+  async function openView(u: BoardUser) {
+    setViewTarget(u);
+    try {
+      const full = await api.get<ApiUser>(`/users/${u.id}`);
+      setViewTarget(prev => prev?.id === u.id ? toUIUser(full, companies) : prev);
+    } catch { }
+  }
+
   const filtered = useMemo(() => {
     let r = rows;
-    if (tab !== 'all')             r = r.filter(u => u.status    === tab);
-    if (companyFilter !== 'all')   r = r.filter(u => u.companyId === companyFilter);
-    if (roleFilter    !== 'all')   r = r.filter(u => u.role      === roleFilter);
+    if (tab !== 'all')           r = r.filter(u => u.status === tab);
+    if (companyFilter !== 'all') r = r.filter(u => u.companyIds.includes(companyFilter));
+    if (roleFilter    !== 'all') r = r.filter(u => u.role   === roleFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       r = r.filter(u =>
         u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        u.companyName.toLowerCase().includes(q)
+        u.login.toLowerCase().includes(q) ||
+        u.companyNames.some(n => n.toLowerCase().includes(q))
       );
     }
     return r;
@@ -559,23 +536,27 @@ export default function BoardUsersPage() {
     const created = await api.post<ApiUser>('/users', {
       kind: 'board',
       full_name: f.name,
-      email: f.email,
+      login: f.email,
       role: 'owner',
       status: f.status,
       password: f.password,
+      phone: f.phone,
+      telegram: f.telegram,
     });
     setRows(p => [toUIUser(created, companies), ...p]);
     setCreateOpen(false);
-    setCreatedCreds({ name: created.full_name, email: created.email, password: f.password });
+    setCreatedCreds({ name: created.full_name, login: created.login ?? f.email, password: f.password });
   }
 
   async function handleEdit(f: FormState): Promise<void> {
     if (!editTarget) return;
     const payload: Record<string, unknown> = {
       full_name: f.name,
-      email: f.email,
+      login: f.email,
       role: f.role,
       status: f.status,
+      phone: f.phone,
+      telegram: f.telegram,
     };
     if (f.password.trim()) payload.password = f.password;
     const updated = await api.put<ApiUser>(`/users/${editTarget.id}`, payload);
@@ -628,13 +609,18 @@ export default function BoardUsersPage() {
       {editTarget && (
         <UserModal
           mode="edit"
-          initial={{ name: editTarget.name, email: editTarget.email, role: editTarget.role, status: editTarget.status, password: '' }}
+          initial={{ name: editTarget.name, email: editTarget.login, phone: editTarget.phone, telegram: editTarget.telegram, role: editTarget.role, status: editTarget.status, password: '' }}
           onClose={() => setEditTarget(null)}
           onSave={handleEdit}
         />
       )}
       {viewTarget && (
-        <UserDetailModal user={viewTarget} onClose={() => setViewTarget(null)} onEdit={() => { setEditTarget(viewTarget); setViewTarget(null); }} />
+        <UserDetailModal
+          user={viewTarget}
+          onClose={() => setViewTarget(null)}
+          editLoading={editingId === viewTarget.id}
+          onEdit={() => { const u = viewTarget; setViewTarget(null); openEdit(u); }}
+        />
       )}
       {deleteTarget && (
         <DeleteConfirmModal
@@ -647,7 +633,7 @@ export default function BoardUsersPage() {
         />
       )}
 
-      {createdCreds && <CredsModal {...createdCreds} onClose={() => setCreatedCreds(null)} />}
+      {createdCreds && <CredsModal name={createdCreds.name} login={createdCreds.login} password={createdCreds.password} onClose={() => setCreatedCreds(null)} />}
 
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
@@ -733,7 +719,7 @@ export default function BoardUsersPage() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr><TH>User</TH><TH>Email</TH><TH>Company</TH><TH>Role</TH><TH>Status</TH><TH right>Actions</TH></tr>
+                <tr><TH>User</TH><TH>Login</TH><TH>Company</TH><TH>Role</TH><TH>Status</TH><TH right>Actions</TH></tr>
               </thead>
               <tbody>
                 {paginated.map((u, i) => {
@@ -744,15 +730,32 @@ export default function BoardUsersPage() {
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
                       <td style={{ padding: '11px 14px' }}>
-                        <button onClick={() => setViewTarget(u)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                        <button onClick={() => openView(u)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                           <div style={{ width: 34, height: 34, borderRadius: '50%', backgroundColor: u.avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>{u.initials}</span>
                           </div>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)' }}>{u.name}</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3 }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)' }}>{u.name}</span>
+                            {u.mustChangePassword && (
+                              <span style={{ fontSize: '0.6rem', fontWeight: 700, backgroundColor: '#FEF9C3', color: '#854D0E', border: '1px solid #FDE68A', padding: '1px 6px', borderRadius: 99, lineHeight: 1.5 }}>MUST CHANGE PW</span>
+                            )}
+                          </div>
                         </button>
                       </td>
-                      <td style={{ padding: '11px 14px' }}><span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', fontFamily: 'monospace' }}>{u.email}</span></td>
-                      <td style={{ padding: '11px 14px' }}><span style={{ fontSize: '0.83rem', color: 'var(--foreground)' }}>{u.companyName}</span></td>
+                      <td style={{ padding: '11px 14px' }}><span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', fontFamily: 'monospace' }}>{u.login}</span></td>
+                      <td style={{ padding: '11px 14px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {u.companyNames.length === 0
+                            ? <span style={{ fontSize: '0.83rem', color: 'var(--muted-foreground)' }}>—</span>
+                            : u.companyNames.length === 1
+                              ? <span style={{ fontSize: '0.83rem', color: 'var(--foreground)' }}>{u.companyNames[0]}</span>
+                              : <>
+                                  <span style={{ fontSize: '0.83rem', color: 'var(--foreground)' }}>{u.companyNames[0]}</span>
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)' }}>+{u.companyNames.length - 1} more</span>
+                                </>
+                          }
+                        </div>
+                      </td>
                       <td style={{ padding: '11px 14px' }}>
                         <span style={{ display: 'inline-block', backgroundColor: rs.bg, color: rs.color, border: `1px solid ${rs.border}`, fontSize: '0.7rem', fontWeight: 700, padding: '3px 9px', borderRadius: 99 }}>{roleLabel(u.role)}</span>
                       </td>
@@ -764,11 +767,11 @@ export default function BoardUsersPage() {
                       </td>
                       <td style={{ padding: '11px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                          <button onClick={() => setEditTarget(u)} title="Edit"
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
+                          <button onClick={() => openEdit(u)} title="Edit" disabled={editingId === u.id}
+                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', cursor: editingId === u.id ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: editingId === u.id ? 0.6 : 1 }}
+                            onMouseEnter={e => { if (!editingId) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
-                            <Pencil size={13} />
+                            {editingId === u.id ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />}
                           </button>
                           <button onClick={() => setDeleteTarget(u)} title="Delete"
                             style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #FECACA', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

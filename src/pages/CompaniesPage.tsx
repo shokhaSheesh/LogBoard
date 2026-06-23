@@ -58,8 +58,6 @@ interface FetchedPlan {
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const PLAN_ENUM = ['Basic', 'Starter', 'Professional', 'Enterprise'];
-
 const PLAN_STYLE: Record<string, { bg: string; color: string }> = {
   Basic:        { bg: '#F0FDF4', color: '#15803D' },
   Starter:      { bg: '#EFF6FF', color: '#2563EB' },
@@ -137,7 +135,13 @@ function toApiPayload(f: FormState) {
     owner_phone: f.ownerPhone,
     owner_telegram: f.ownerTelegram,
     plan: f.plan,
-    plan_expiry: f.planExpiry ? new Date(f.planExpiry).toISOString().split('T')[0] + 'T00:00:00Z' : '',
+    plan_expiry: f.planExpiry ? (() => {
+      const d = new Date(f.planExpiry);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}T00:00:00Z`;
+    })() : '',
     eld: f.eld,
     status: f.status,
   };
@@ -674,6 +678,7 @@ const EMPTY_FORM: FormState = {
 interface BoardUser {
   id: string;
   full_name: string;
+  login: string;
   email: string;
   phone: string;
   telegram: string;
@@ -724,13 +729,14 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
 
   const filteredUsers = users.filter(u => {
     const q = userSearch.toLowerCase();
-    return !q || u.full_name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+    return !q || u.full_name.toLowerCase().includes(q) || (u.login ?? u.email).toLowerCase().includes(q);
   });
 
   function validate() {
     const e: Partial<Record<keyof FormState, string>> = {};
     if (!form.name.trim())    e.name    = 'Required';
     if (!form.ownerId.trim()) e.ownerId = 'Required';
+    if (!form.owner.trim())   e.owner   = 'Required';
     if (!form.mc.trim())      e.mc      = 'Required';
     if (!form.plan)           e.plan    = 'Required';
     return e;
@@ -766,7 +772,6 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
   });
 
   const labelStyle = { display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 4 } as const;
-  const disabledInputStyle = { width: '100%', padding: '7px 11px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--muted-foreground)', backgroundColor: 'var(--muted)', outline: 'none', boxSizing: 'border-box' as const, opacity: 0.5, cursor: 'not-allowed' };
 
   const req = <span style={{ color: '#EF4444', marginLeft: 2 }}>*</span>;
 
@@ -875,7 +880,7 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 600, color: u.id === form.ownerId ? '#2563EB' : 'var(--foreground)', lineHeight: 1.2 }}>{u.full_name}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.login || u.email}</div>
                       </div>
                     </button>
                   ))}
@@ -884,33 +889,23 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
             )}
           </div>
 
-          {/* Login / Password — fields not yet handled by the backend */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
-                Login
-                <span style={{ fontSize: '0.62rem', fontWeight: 700, backgroundColor: '#FEF9C3', color: '#92400E', border: '1px solid #FDE68A', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.03em' }}>
-                  BACKEND PENDING
-                </span>
-              </label>
-              <input disabled placeholder="company.login" style={{ ...disabledInputStyle }} />
-            </div>
-            <div>
-              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
-                Password
-                <span style={{ fontSize: '0.62rem', fontWeight: 700, backgroundColor: '#FEF9C3', color: '#92400E', border: '1px solid #FDE68A', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.03em' }}>
-                  BACKEND PENDING
-                </span>
-              </label>
-              <input disabled type="password" placeholder="••••••••" style={{ ...disabledInputStyle }} />
-            </div>
+          <div>
+            <label style={labelStyle}>Owner Name {req}</label>
+            <input
+              value={form.owner}
+              onChange={e => { setForm(f => ({ ...f, owner: e.target.value })); setErrors(er => ({ ...er, owner: undefined })); }}
+              placeholder="e.g. John Doe"
+              style={{ width: '100%', padding: '7px 11px', borderRadius: 8, border: `1px solid ${errors.owner ? '#EF4444' : 'var(--border)'}`, fontSize: '0.82rem', color: 'var(--foreground)', backgroundColor: 'var(--muted)', outline: 'none', boxSizing: 'border-box' }}
+            />
+            {errors.owner && <span style={{ fontSize: '0.7rem', color: '#EF4444', marginTop: 2, display: 'block' }}>Required</span>}
           </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label style={labelStyle}>Plan {req}</label>
               <CustomSelect
                 value={form.plan}
-                options={PLAN_ENUM}
+                options={plans.map(p => p.name)}
                 onChange={(v) => {
                   const matched = plans.find(p => p.name === v);
                   const expiry = matched
