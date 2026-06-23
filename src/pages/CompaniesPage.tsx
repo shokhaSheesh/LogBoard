@@ -989,7 +989,7 @@ export default function CompaniesPage() {
     try {
       const qs = new URLSearchParams();
       if (tab !== 'all') qs.set('status', tab);
-      if (search)        qs.set('search', search);
+      if (search)        qs.set('q', search);
       if (planFilter !== 'all') qs.set('plan', planFilter);
       const q = qs.toString();
       const body = await api.getBody<{ data: ApiCompany[]; stats?: { total?: number; active?: number; pending?: number; suspended?: number } }>(`/companies${q ? `?${q}` : ''}`);
