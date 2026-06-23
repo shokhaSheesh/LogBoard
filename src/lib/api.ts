@@ -15,7 +15,7 @@ export class ApiException extends Error {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}, unwrapData = true): Promise<T> {
   const token = getToken();
 
   const res = await fetch(`${BASE}${path}`, {
@@ -36,13 +36,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiException(res.status, err.code, err.message);
   }
 
-  return body.data as T;
+  return (unwrapData ? body.data : body) as T;
 }
 
 export const api = {
-  get:    <T>(path: string)                  => request<T>(path),
-  post:   <T>(path: string, body: unknown)   => request<T>(path, { method: 'POST',   body: JSON.stringify(body) }),
-  put:    <T>(path: string, body: unknown)   => request<T>(path, { method: 'PUT',    body: JSON.stringify(body) }),
-  patch:  <T>(path: string, body: unknown)   => request<T>(path, { method: 'PATCH',  body: JSON.stringify(body) }),
-  delete:    (path: string)                  => request<void>(path, { method: 'DELETE' }),
+  get:     <T>(path: string)                => request<T>(path),
+  getBody: <T>(path: string)                => request<T>(path, {}, false),
+  post:    <T>(path: string, body: unknown) => request<T>(path, { method: 'POST',   body: JSON.stringify(body) }),
+  put:     <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT',    body: JSON.stringify(body) }),
+  patch:   <T>(path: string, body: unknown) => request<T>(path, { method: 'PATCH',  body: JSON.stringify(body) }),
+  delete:     (path: string)                => request<void>(path, { method: 'DELETE' }),
 };

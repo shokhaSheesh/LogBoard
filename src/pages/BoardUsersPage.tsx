@@ -31,6 +31,11 @@ interface ApiCompany {
   owner_id: string;
 }
 
+interface ApiUsersBody {
+  data: ApiUser[];
+  stats: { total: number; active: number; suspended: number };
+}
+
 interface BoardUser {
   id: string;
   name: string;
@@ -485,29 +490,37 @@ export default function BoardUsersPage() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      // Load companies once; keep them in ref so filter re-fetches don't need to repeat this
+      // Load companies once; keep them in ref so subsequent fetches skip this
       if (companiesRef.current.length === 0) {
         const cos = await api.get<ApiCompany[]>('/companies');
         companiesRef.current = cos;
         setCompanies(cos);
       }
 
+      // company_id backend filter doesn't work for owners (association is via companies.owner_id,
+      // not user.company_id), so omit it and apply client-side below
       const qs = new URLSearchParams({ kind: 'board' });
-      if (tab !== 'all')           qs.set('status', tab);
-      if (search)                  qs.set('search', search);
-      if (companyFilter !== 'all') qs.set('company_id', companyFilter);
-      if (roleFilter    !== 'all') qs.set('role', roleFilter);
-      const users = await api.get<ApiUser[]>(`/users?${qs.toString()}`);
-      setRows(users.map(u => toUIUser(u, companiesRef.current)));
+      if (tab !== 'all')        qs.set('status', tab);
+      if (search)               qs.set('search', search);
+      if (roleFilter !== 'all') qs.set('role', roleFilter);
 
-      // Set global stat counts from the initial unfiltered fetch only
-      if (tab === 'all' && !search && companyFilter === 'all' && roleFilter === 'all') {
-        setAllCounts({
-          total: users.length,
-          active: users.filter(u => u.status === 'Active').length,
-          suspended: users.filter(u => u.status === 'Suspended').length,
-        });
-      }
+      const body = await api.getBody<ApiUsersBody>(`/users?${qs.toString()}`);
+      const users = body.data ?? [];
+
+      // Stats come from the backend response
+      setAllCounts({
+        total: body.stats?.total ?? users.length,
+        active: body.stats?.active ?? users.filter(u => u.status === 'Active').length,
+        suspended: body.stats?.suspended ?? users.filter(u => u.status === 'Suspended').length,
+      });
+
+      // Company filter: client-side — owners link via companies.owner_id, not user.company_id
+      const co = companiesRef.current.find(c => c.id === companyFilter);
+      const displayed = companyFilter === 'all' || !co
+        ? users
+        : users.filter(u => u.id === co.owner_id || u.company_id === co.id);
+
+      setRows(displayed.map(u => toUIUser(u, companiesRef.current)));
     } catch (err) {
       setLoadError(err instanceof ApiException ? err.message : 'Failed to load board users.');
     } finally {
