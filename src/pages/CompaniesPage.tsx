@@ -981,14 +981,16 @@ export default function CompaniesPage() {
   // One-time: fetch plans + global stats (unaffected by filters)
   useEffect(() => {
     api.get<FetchedPlan[]>('/plans').then(setPlans).catch(() => {});
-    api.get<ApiCompany[]>('/companies').then(all => {
-      setAllCounts({
-        total: all.length,
-        active: all.filter(c => c.status === 'Active').length,
-        pending: all.filter(c => c.status === 'Pending').length,
-        suspended: all.filter(c => c.status === 'Suspended').length,
-      });
-    }).catch(() => {});
+    api.getBody<{ data: ApiCompany[]; stats?: { total?: number; active?: number; pending?: number; suspended?: number } }>('/companies')
+      .then(body => {
+        const all = body.data ?? [];
+        setAllCounts({
+          total:     body.stats?.total     ?? all.length,
+          active:    body.stats?.active    ?? all.filter(c => c.status === 'Active').length,
+          pending:   body.stats?.pending   ?? all.filter(c => c.status === 'Pending').length,
+          suspended: body.stats?.suspended ?? all.filter(c => c.status === 'Suspended').length,
+        });
+      }).catch(() => {});
   }, []);
 
   const fetchCompanies = useCallback(async () => {
