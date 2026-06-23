@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router';
-import { Bell, Search, ChevronRight, Menu } from 'lucide-react';
+import { Bell, Search, ChevronRight, Menu, LogOut } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface Crumb {
   label: string;
@@ -21,6 +22,7 @@ interface TopHeaderProps {
 
 export function TopHeader({ onToggleSidebar }: TopHeaderProps) {
   const { pathname } = useLocation();
+  const { logout } = useAuth();
   const breadcrumbs = BREADCRUMB_MAP[pathname] ?? [{ label: 'Home' }, { label: pathname.split('/').pop() ?? '', active: true }];
 
   return (
@@ -128,6 +130,24 @@ export function TopHeader({ onToggleSidebar }: TopHeaderProps) {
         >
           <span style={{ color: '#ffffff', fontSize: '0.75rem', fontWeight: 700 }}>SA</span>
         </div>
+
+        {/* Logout */}
+        <button
+          onClick={logout}
+          title="Log out"
+          className="flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
+          style={{ backgroundColor: 'var(--muted)', border: '1px solid var(--border)' }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#FEF2F2';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = '#FCA5A5';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+          }}
+        >
+          <LogOut size={16} style={{ color: '#EF4444' }} />
+        </button>
       </div>
     </header>
   );
