@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CheckCircle2, Plus, Pencil, Trash2, X, Loader2,
   ChevronLeft, ChevronRight, ChevronDown,
@@ -164,7 +165,7 @@ function CustomSelect({ value, options, onChange }: {
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value || <span style={{ color: 'var(--muted-foreground)' }}>Select…</span>}</span>
         <ChevronDown size={13} style={{ flexShrink: 0, opacity: 0.5, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
       </button>
-      {open && (
+      {open && createPortal(
         <div ref={popRef} style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 9999, backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', overflow: 'hidden', maxHeight: 220, overflowY: 'auto', opacity: ready ? 1 : 0, transition: 'opacity 80ms' }}>
           {options.map(o => (
             <button key={o} type="button" onClick={() => { onChange(o); setOpen(false); }}
@@ -173,7 +174,8 @@ function CustomSelect({ value, options, onChange }: {
               onMouseLeave={e => { if (o !== value) (e.currentTarget.style.backgroundColor = 'transparent'); }}
             >{o}</button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -234,7 +236,7 @@ function SelectPicker({ value, options, placeholder, onChange }: {
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLabel || placeholder}</span>
         <ChevronDown size={13} style={{ flexShrink: 0, opacity: 0.5, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
       </button>
-      {open && (
+      {open && createPortal(
         <div ref={popRef} style={{ position: 'fixed', top: pos.top, left: pos.left, width: Math.max(pos.width, 240), zIndex: 9999, backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', overflow: 'hidden', maxHeight: 240, overflowY: 'auto', opacity: ready ? 1 : 0, transition: 'opacity 80ms' }}>
           {options.map(o => (
             <button key={o.value} type="button" onClick={() => { onChange(o.value); setOpen(false); }}
@@ -246,7 +248,8 @@ function SelectPicker({ value, options, placeholder, onChange }: {
           {options.length === 0 && (
             <div style={{ padding: '10px 12px', fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>No options available</div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -334,7 +337,7 @@ function DatePicker({ value, onChange, placeholder = 'Select date' }: {
         <CalendarIcon />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div ref={popRef} style={{ position: 'fixed', top: pos.top, left: pos.left, width: Math.max(pos.width, 268), zIndex: 9999, backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 12px 32px rgba(0,0,0,0.16)', padding: 12, opacity: ready ? 1 : 0, transition: 'opacity 80ms' }}>
 
           {view === 'day' && <>
@@ -408,7 +411,8 @@ function DatePicker({ value, onChange, placeholder = 'Select date' }: {
               })}
             </div>
           </>}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
