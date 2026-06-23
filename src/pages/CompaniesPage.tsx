@@ -978,19 +978,9 @@ export default function CompaniesPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // One-time: fetch plans + global stats (unaffected by filters)
+  // One-time: fetch plans only (stats come from every fetchCompanies response)
   useEffect(() => {
     api.get<FetchedPlan[]>('/plans').then(setPlans).catch(() => {});
-    api.getBody<{ data: ApiCompany[]; stats?: { total?: number; active?: number; pending?: number; suspended?: number } }>('/companies')
-      .then(body => {
-        const all = body.data ?? [];
-        setAllCounts({
-          total:     body.stats?.total     ?? all.length,
-          active:    body.stats?.active    ?? all.filter(c => c.status === 'Active').length,
-          pending:   body.stats?.pending   ?? all.filter(c => c.status === 'Pending').length,
-          suspended: body.stats?.suspended ?? all.filter(c => c.status === 'Suspended').length,
-        });
-      }).catch(() => {});
   }, []);
 
   const fetchCompanies = useCallback(async () => {
@@ -1002,8 +992,15 @@ export default function CompaniesPage() {
       if (search)        qs.set('search', search);
       if (planFilter !== 'all') qs.set('plan', planFilter);
       const q = qs.toString();
-      const companies = await api.get<ApiCompany[]>(`/companies${q ? `?${q}` : ''}`);
+      const body = await api.getBody<{ data: ApiCompany[]; stats?: { total?: number; active?: number; pending?: number; suspended?: number } }>(`/companies${q ? `?${q}` : ''}`);
+      const companies = body.data ?? [];
       setRows(companies.map(toUICompany));
+      setAllCounts({
+        total:     body.stats?.total     ?? companies.length,
+        active:    body.stats?.active    ?? companies.filter(c => c.status === 'Active').length,
+        pending:   body.stats?.pending   ?? companies.filter(c => c.status === 'Pending').length,
+        suspended: body.stats?.suspended ?? companies.filter(c => c.status === 'Suspended').length,
+      });
     } catch {
       setLoadError('Failed to load companies. Please refresh.');
     } finally {
