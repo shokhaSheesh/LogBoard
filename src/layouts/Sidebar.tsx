@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router';
+import { useAuth } from '@/context/AuthContext';
+import { SCREEN_READ } from '@/lib/permissions';
 import {
   LayoutDashboard,
   Building2,
@@ -98,6 +100,13 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  const { can, permsLoaded } = useAuth();
+  // Until permissions resolve, show everything (avoids a flash of an empty menu);
+  // once loaded, hide any screen the role can't read.
+  const visibleItems = permsLoaded
+    ? NAV_ITEMS.filter((item) => { const key = SCREEN_READ[item.path]; return !key || can(key); })
+    : NAV_ITEMS;
+
   return (
     <aside
       className={`relative flex flex-col h-full shrink-0 select-none overflow-hidden transition-[width] duration-300 ease-in-out ${
@@ -155,7 +164,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         )}
 
         <ul className="space-y-0.5">
-          {NAV_ITEMS.map((item) => (
+          {visibleItems.map((item) => (
             <NavItem key={item.path} item={item} collapsed={collapsed} />
           ))}
         </ul>

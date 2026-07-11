@@ -12,6 +12,7 @@ import RolesPermissionsPage from '@/pages/RolesPermissionsPage';
 import PermissionModulesPage from '@/pages/PermissionModulesPage';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
 import ErrorPage from '@/pages/ErrorPage';
+import { Gated } from '@/components/shared/Gated';
 
 function ProtectedRoute() {
   const { user, isLoading } = useAuth();
@@ -52,14 +53,14 @@ const router = createBrowserRouter([
         errorElement: <ErrorPage />,
         children: [
           { index: true, element: <Navigate to="dashboard" replace /> },
-          { path: 'dashboard', element: <DashboardPage /> },
-          { path: 'companies', element: <CompaniesPage /> },
-          { path: 'subscriptions', element: <SubscriptionsPage /> },
-          { path: 'notifications', element: <NotificationsPage /> },
-          { path: 'board-users', element: <BoardUsersPage /> },
-          { path: 'admin-users', element: <AdminUsersPage /> },
-          { path: 'roles-permissions', element: <RolesPermissionsPage /> },
-          { path: 'permission-modules', element: <PermissionModulesPage /> },
+          { path: 'dashboard', element: <Gated permission="dashboard.read"><DashboardPage /></Gated> },
+          { path: 'companies', element: <Gated permission="companies.read"><CompaniesPage /></Gated> },
+          { path: 'subscriptions', element: <Gated permission="subscriptions.read"><SubscriptionsPage /></Gated> },
+          { path: 'notifications', element: <Gated permission="notifications.read"><NotificationsPage /></Gated> },
+          { path: 'board-users', element: <Gated permission="board_users.read"><BoardUsersPage /></Gated> },
+          { path: 'admin-users', element: <Gated permission="board_users.read"><AdminUsersPage /></Gated> },
+          { path: 'roles-permissions', element: <Gated permission="roles.read"><RolesPermissionsPage /></Gated> },
+          { path: 'permission-modules', element: <Gated permission="modules.read"><PermissionModulesPage /></Gated> },
         ],
       },
     ],
