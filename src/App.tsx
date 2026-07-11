@@ -10,6 +10,7 @@ import AdminUsersPage from '@/pages/AdminUsersPage';
 import RolesPermissionsPage from '@/pages/RolesPermissionsPage';
 import PermissionModulesPage from '@/pages/PermissionModulesPage';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
+import ErrorPage from '@/pages/ErrorPage';
 
 function ProtectedRoute() {
   const { user, isLoading } = useAuth();
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <Navigate to="/login" replace />,
+    errorElement: <ErrorPage />,
   },
   {
     element: <PublicRoute />,
@@ -46,6 +48,7 @@ const router = createBrowserRouter([
       {
         path: '/admin',
         element: <AdminLayout />,
+        errorElement: <ErrorPage />,
         children: [
           { index: true, element: <Navigate to="dashboard" replace /> },
           { path: 'dashboard', element: <DashboardPage /> },
@@ -58,6 +61,10 @@ const router = createBrowserRouter([
         ],
       },
     ],
+  },
+  {
+    path: '*',
+    element: <ErrorPage />,
   },
 ]);
 
