@@ -13,7 +13,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -23,20 +23,20 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!email.trim() || !password.trim()) {
+    if (!identifier.trim() || !password.trim()) {
       setError('Please enter your login and password.');
       return;
     }
     setIsLoading(true);
     try {
-      await login(email.trim(), password, rememberMe);
+      await login(identifier.trim(), password, rememberMe);
       navigate('/admin/dashboard');
     } catch (err) {
       if (err instanceof ApiException) {
         if (err.code === 'invalid_credentials') {
-          setError('Invalid email or password.');
+          setError('Invalid login or password.');
         } else if (err.code === 'invalid_request') {
-          setError('Please check your email and password.');
+          setError('Please check your login and password.');
         } else {
           setError(err.message || 'Something went wrong. Please try again.');
         }
@@ -82,16 +82,16 @@ export default function LoginPage() {
 
             {/* Email / Login */}
             <div className="flex flex-col gap-2">
-              <Label htmlFor="email" style={{ color: '#94A3B8', fontSize: '0.8rem', fontWeight: 500, letterSpacing: '0.03em' }}>
+              <Label htmlFor="login" style={{ color: '#94A3B8', fontSize: '0.8rem', fontWeight: 500, letterSpacing: '0.03em' }}>
                 Login
               </Label>
               <Input
-                id="email"
-                type="email"
-                autoComplete="email"
+                id="login"
+                type="text"
+                autoComplete="username"
                 placeholder="admin@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 disabled={isLoading}
                 className="border-[#334155] text-[#F1F5F9] placeholder:text-[#475569] focus-visible:border-[#3B82F6] focus-visible:ring-[#3B82F6]/20"
                 style={{ backgroundColor: '#1E293B', height: 44, fontSize: '0.875rem', borderRadius: 10 }}

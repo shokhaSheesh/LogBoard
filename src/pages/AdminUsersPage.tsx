@@ -82,6 +82,11 @@ interface ApiUser {
   must_change_password: boolean;
 }
 
+interface ApiUsersBody {
+  data: ApiUser[];
+  stats?: { total?: number; active?: number; suspended?: number };
+}
+
 interface ApiRole {
   id: string;
   name: string;
@@ -467,6 +472,7 @@ export default function AdminUsersPage() {
   const [search, setSearch]             = useState('');
   const [roleFilter, setRoleFilter]     = useState<string>('all');
   const [page, setPage]                 = useState(1);
+  const [allCounts, setAllCounts]       = useState({ total: 0, active: 0, suspended: 0 });
 
   const [createOpen, setCreateOpen]     = useState(false);
   const [createdCreds, setCreatedCreds] = useState<{ name: string; login: string; password: string } | null>(null);
@@ -491,8 +497,14 @@ export default function AdminUsersPage() {
       const qs = new URLSearchParams({ kind: 'admin' });
       if (search)            qs.set('q', search);
       if (roleFilter !== 'all') qs.set('role', roleFilter);
-      const users = await api.get<ApiUser[]>(`/users?${qs.toString()}`);
+      const body = await api.getBody<ApiUsersBody>(`/users?${qs.toString()}`);
+      const users = body.data ?? [];
       setRows(users.map(toUIUser));
+      setAllCounts({
+        total:     body.stats?.total     ?? users.length,
+        active:    body.stats?.active    ?? users.filter(u => u.status === 'Active').length,
+        suspended: body.stats?.suspended ?? users.filter(u => u.status === 'Suspended').length,
+      });
     } catch (err) {
       setLoadError(err instanceof ApiException ? err.message : 'Failed to load admin users.');
     } finally {
@@ -527,6 +539,8 @@ export default function AdminUsersPage() {
     setRows(p => [toUIUser(created), ...p]);
     setCreateOpen(false);
     setCreatedCreds({ name: created.full_name, login: created.login ?? f.email, password: f.password });
+    const s = created.status === 'Active' ? 'active' : 'suspended';
+    setAllCounts(c => ({ ...c, total: c.total + 1, [s]: c[s] + 1 }));
   }
 
   async function handleEdit(f: FormState): Promise<void> {
@@ -548,6 +562,8 @@ export default function AdminUsersPage() {
     setDeleting(true);
     try {
       await api.delete(`/users/${deleteTarget.id}`);
+      const s = deleteTarget.status === 'Active' ? 'active' : 'suspended';
+      setAllCounts(c => ({ ...c, total: Math.max(0, c.total - 1), [s]: Math.max(0, c[s] - 1) }));
       setRows(p => p.filter(u => u.id !== deleteTarget.id));
       setDeleteTarget(null);
     } finally {
@@ -611,9 +627,9 @@ export default function AdminUsersPage() {
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
         {[
-          { label: 'Total',     value: rows.length,                                       iconBg: '#2563EB' },
-          { label: 'Active',    value: rows.filter(u => u.status === 'Active').length,    iconBg: '#10B981' },
-          { label: 'Suspended', value: rows.filter(u => u.status === 'Suspended').length, iconBg: '#EF4444' },
+          { label: 'Total',     value: allCounts.total,     iconBg: '#2563EB' },
+          { label: 'Active',    value: allCounts.active,    iconBg: '#10B981' },
+          { label: 'Suspended', value: allCounts.suspended, iconBg: '#EF4444' },
         ].map(({ label, value, iconBg }) => (
           <div key={label} style={{ backgroundColor: 'var(--card)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
             <div>

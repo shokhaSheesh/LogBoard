@@ -32,7 +32,8 @@ interface AuthContextValue {
   permsLoaded: boolean;
   /** True if the current user holds the given "module.action" permission key. */
   can: (key: string) => boolean;
-  login: (email: string, password: string, remember: boolean) => Promise<void>;
+  /** `identifier` is the user's login (username); an email is accepted as a fallback. */
+  login: (identifier: string, password: string, remember: boolean) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -90,8 +91,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const can = (key: string) => permissions.has(key);
 
-  async function login(email: string, password: string, remember: boolean) {
-    const data = await api.post<LoginResponse>('/auth/login', { email, password });
+  async function login(identifier: string, password: string, remember: boolean) {
+    // The API signs in on `login` (the username); it also accepts an email as a
+    // fallback identifier, so we send both from the single input.
+    const data = await api.post<LoginResponse>('/auth/login', { login: identifier, email: identifier, password });
     saveToken(data.token, remember);
     setUser(data.user);
   }
