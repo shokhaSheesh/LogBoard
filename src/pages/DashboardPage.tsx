@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router';
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts';
-import { Building2, Users, Package, TrendingUp, TrendingDown, ChevronDown, Download, Loader2 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { Building2, Users, Package, TrendingUp, TrendingDown, ChevronDown, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 
 // ── API types ─────────────────────────────────────────────────────────────────
@@ -196,13 +194,11 @@ function ChartLoader() {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { can } = useAuth();
   const [summary, setSummary]     = useState<DashboardSummary | null>(null);
   const [years, setYears]         = useState<string[]>([]);
   const [seriesCache, setSeries]  = useState<Record<string, SeriesMonth[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [exporting, setExporting] = useState(false);
 
   const [companyYear, setCompanyYear] = useState('');
   const [driverYear,  setDriverYear]  = useState('');
@@ -250,25 +246,6 @@ export default function DashboardPage() {
   useEffect(() => { loadSeries(driverYear);  }, [driverYear, loadSeries]);
   useEffect(() => { loadSeries(loadsYear);   }, [loadsYear, loadSeries]);
 
-  async function handleExport(year: string) {
-    setExporting(true);
-    try {
-      const blob = await api.getBlob(`/admin/dashboard/export?year=${year}`);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dashboard-${year}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      // silent — button re-enables
-    } finally {
-      setExporting(false);
-    }
-  }
-
   if (isLoading) {
     return (
       <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
@@ -296,30 +273,9 @@ export default function DashboardPage() {
     <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
 
       {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 style={{ color: 'var(--foreground)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>Super Admin Dashboard</h1>
-          <p style={{ color: 'var(--muted-foreground)', fontSize: '0.83rem', marginTop: 3 }}>Overview of your SaaS ecosystem</p>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            onClick={() => handleExport(loadsYear || companyYear)}
-            disabled={exporting}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, cursor: exporting ? 'not-allowed' : 'pointer', fontSize: '0.82rem', fontWeight: 500, color: 'var(--foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', opacity: exporting ? 0.6 : 1 }}
-            onMouseEnter={(e) => { if (!exporting) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--card)')}
-          >
-            {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Export Data
-          </button>
-          {can('companies.create') && (
-            <Link
-              to="/admin/companies"
-              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: '#fff', border: 'none', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' }}
-            >
-              + Add Company
-            </Link>
-          )}
-        </div>
+      <div className="mb-6">
+        <h1 style={{ color: 'var(--foreground)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>Super Admin Dashboard</h1>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: '0.83rem', marginTop: 3 }}>Overview of your SaaS ecosystem</p>
       </div>
 
       {/* ── Row 1: Stat Cards ───────────────────────────────────────── */}

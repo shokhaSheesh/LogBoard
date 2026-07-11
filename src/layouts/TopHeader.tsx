@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router';
-import { Bell, Search, ChevronRight, Menu, LogOut } from 'lucide-react';
+import { ChevronRight, Menu, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface Crumb {
@@ -73,57 +73,6 @@ export function TopHeader({ onToggleSidebar }: TopHeaderProps) {
 
       {/* Right controls */}
       <div className="flex items-center gap-3">
-        {/* Search */}
-        <div
-          className="flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer transition-colors"
-          style={{
-            backgroundColor: 'var(--muted)',
-            border: '1px solid var(--border)',
-            minWidth: 220,
-          }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLDivElement).style.borderColor = '#93C5FD')
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)')
-          }
-        >
-          <Search size={15} style={{ color: 'var(--muted-foreground)' }} />
-          <span style={{ fontSize: '0.82rem', color: 'var(--muted-foreground)', flex: 1 }}>
-            Search...
-          </span>
-          <kbd
-            className="flex items-center gap-0.5 rounded px-1.5 py-0.5"
-            style={{
-              backgroundColor: 'var(--border)',
-              fontSize: '0.65rem',
-              color: 'var(--muted-foreground)',
-              fontFamily: 'inherit',
-              lineHeight: 1.4,
-            }}
-          >
-            ⌘K
-          </kbd>
-        </div>
-
-        {/* Notification Bell */}
-        <button
-          className="relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
-          style={{ backgroundColor: 'var(--muted)', border: '1px solid var(--border)' }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent)')
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)')
-          }
-        >
-          <Bell size={17} style={{ color: 'var(--muted-foreground)' }} />
-          <span
-            className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-            style={{ backgroundColor: '#EF4444', boxShadow: '0 0 0 2px #ffffff' }}
-          />
-        </button>
-
         {/* Avatar */}
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer"
