@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Lock,
   Layers,
+  Bell,
   ChevronRight,
   Zap,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ const NAV_ITEMS: NavItemDef[] = [
   { path: '/admin/dashboard',         label: 'Dashboard',           icon: <LayoutDashboard size={18} /> },
   { path: '/admin/companies',         label: 'Companies',           icon: <Building2 size={18} /> },
   { path: '/admin/subscriptions',     label: 'Subscriptions',       icon: <CreditCard size={18} /> },
+  { path: '/admin/notifications',     label: 'Notifications',       icon: <Bell size={18} /> },
   { path: '/admin/board-users',       label: 'Board Users',         icon: <Users size={18} /> },
   { path: '/admin/admin-users',       label: 'Admin Users',         icon: <ShieldCheck size={18} /> },
   { path: '/admin/roles-permissions', label: 'Roles & Permissions', icon: <Lock size={18} /> },

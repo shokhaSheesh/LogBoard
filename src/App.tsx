@@ -5,6 +5,7 @@ import LoginPage from '@/pages/LoginPage';
 import DashboardPage from '@/pages/DashboardPage';
 import CompaniesPage from '@/pages/CompaniesPage';
 import SubscriptionsPage from '@/pages/SubscriptionsPage';
+import NotificationsPage from '@/pages/NotificationsPage';
 import BoardUsersPage from '@/pages/BoardUsersPage';
 import AdminUsersPage from '@/pages/AdminUsersPage';
 import RolesPermissionsPage from '@/pages/RolesPermissionsPage';
@@ -54,6 +55,7 @@ const router = createBrowserRouter([
           { path: 'dashboard', element: <DashboardPage /> },
           { path: 'companies', element: <CompaniesPage /> },
           { path: 'subscriptions', element: <SubscriptionsPage /> },
+          { path: 'notifications', element: <NotificationsPage /> },
           { path: 'board-users', element: <BoardUsersPage /> },
           { path: 'admin-users', element: <AdminUsersPage /> },
           { path: 'roles-permissions', element: <RolesPermissionsPage /> },

@@ -11,6 +11,7 @@ const BREADCRUMB_MAP: Record<string, Crumb[]> = {
   '/admin/dashboard':         [{ label: 'Home' }, { label: 'Dashboard', active: true }],
   '/admin/companies':         [{ label: 'Home' }, { label: 'Companies', active: true }],
   '/admin/subscriptions':     [{ label: 'Home' }, { label: 'Subscriptions', active: true }],
+  '/admin/notifications':     [{ label: 'Home' }, { label: 'Notifications', active: true }],
   '/admin/board-users':       [{ label: 'Home' }, { label: 'Users' }, { label: 'Board Users', active: true }],
   '/admin/admin-users':       [{ label: 'Home' }, { label: 'Users' }, { label: 'Admin Users', active: true }],
   '/admin/roles-permissions': [{ label: 'Home' }, { label: 'Security' }, { label: 'Roles & Permissions', active: true }],
