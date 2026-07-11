@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Search, Plus, Pencil, Trash2, X, ShieldCheck, Eye, EyeOff, ChevronDown, Loader2, Copy, Check } from 'lucide-react';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
+import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 
 // ── CustomSelect ──────────────────────────────────────────────────────────────
@@ -453,6 +454,10 @@ function AdminDetailModal({
 const EMPTY_FORM: FormState = { name: '', email: '', role: '', status: 'Active', password: '' };
 
 export default function AdminUsersPage() {
+  const { can } = useAuth();
+  const canCreate = can('admin_users.create');
+  const canUpdate = can('admin_users.update');
+  const canDelete = can('admin_users.delete');
   const [rows, setRows]                 = useState<AdminUser[]>([]);
   const [roles, setRoles]               = useState<ApiRole[]>([]);
   const [availableRoles, setAvailableRoles] = useState<ApiRole[]>([]);
@@ -630,6 +635,7 @@ export default function AdminUsersPage() {
           <h1 style={{ color: 'var(--foreground)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>Admin Users</h1>
           <p style={{ color: 'var(--muted-foreground)', fontSize: '0.83rem', marginTop: 3 }}>Manage internal super admin staff</p>
         </div>
+        {canCreate && (
         <button
           onClick={() => setCreateOpen(true)}
           disabled={isLoading}
@@ -637,6 +643,7 @@ export default function AdminUsersPage() {
         >
           <Plus size={15} /> Add Admin
         </button>
+        )}
       </div>
 
       {/* Table card */}
@@ -710,18 +717,23 @@ export default function AdminUsersPage() {
                       </td>
                       <td style={{ padding: '11px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                          {canUpdate && (
                           <button onClick={() => setEditTarget(u)} title="Edit"
                             style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
                             <Pencil size={13} />
                           </button>
+                          )}
+                          {canDelete && (
                           <button onClick={() => setDeleteTarget(u)} title="Delete"
                             style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #FECACA', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FEE2E2')}
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FEF2F2')}>
                             <Trash2 size={13} />
                           </button>
+                          )}
+                          {!canUpdate && !canDelete && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>—</span>}
                         </div>
                       </td>
                     </tr>

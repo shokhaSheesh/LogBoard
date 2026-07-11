@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { SearchSelect, type SearchSelectOption } from '@/components/shared/SearchSelect';
+import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -310,6 +311,7 @@ function DetailModal({ batch, audienceLabel, userName, onClose }: {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
+  const { can } = useAuth();
   const [rows, setRows]         = useState<BatchRow[]>([]);
   const [meta, setMeta]         = useState<ListMeta | null>(null);
   const [isLoading, setLoading] = useState(true);
@@ -399,10 +401,12 @@ export default function NotificationsPage() {
           <h1 style={{ color: 'var(--foreground)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>Notifications</h1>
           <p style={{ color: 'var(--muted-foreground)', fontSize: '0.83rem', marginTop: 3 }}>Send platform announcements and review delivery</p>
         </div>
-        <button onClick={() => setComposeOpen(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
-          <Plus size={15} /> Send Notification
-        </button>
+        {can('notifications.create') && (
+          <button onClick={() => setComposeOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
+            <Plus size={15} /> Send Notification
+          </button>
+        )}
       </div>
 
       {/* Filters */}

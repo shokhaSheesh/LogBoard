@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, X, Loader2, Layers } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
 import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
@@ -205,6 +206,10 @@ const TABS: TabItem<TabId>[] = [
 ];
 
 export default function PermissionModulesPage() {
+  const { can } = useAuth();
+  const canCreate = can('modules.create');
+  const canUpdate = can('modules.update');
+  const canDelete = can('modules.delete');
   const [modules, setModules]         = useState<ApiModule[]>([]);
   const [isLoading, setIsLoading]     = useState(true);
   const [loadError, setLoadError]     = useState<string | null>(null);
@@ -287,12 +292,14 @@ export default function PermissionModulesPage() {
             Define custom permission modules for platform and company roles
           </p>
         </div>
+        {canCreate && (
         <button onClick={() => setCreateOpen(true)}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}
           onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; }}
           onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}>
           <Plus size={15} /> Create Module
         </button>
+        )}
       </div>
 
       {/* Stat cards */}
@@ -393,12 +400,15 @@ export default function PermissionModulesPage() {
                       {/* Edit / Delete */}
                       <td style={{ padding: '13px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                          {canUpdate && (
                           <button onClick={() => setEditTarget(m)} title="Edit module"
                             style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'transparent', color: 'var(--muted-foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--muted)'; e.currentTarget.style.color = 'var(--foreground)'; }}
                             onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; }}>
                             <Pencil size={13} />
                           </button>
+                          )}
+                          {canDelete && (
                           <button onClick={() => { setDeleteTarget(m); setDeleteError(null); }} title="Delete module"
                             disabled={m.system}
                             style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'transparent', color: 'var(--muted-foreground)', cursor: m.system ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: m.system ? 0.35 : 1 }}
@@ -406,6 +416,8 @@ export default function PermissionModulesPage() {
                             onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
                             <Trash2 size={13} />
                           </button>
+                          )}
+                          {!canUpdate && !canDelete && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>—</span>}
                         </div>
                       </td>
                     </tr>

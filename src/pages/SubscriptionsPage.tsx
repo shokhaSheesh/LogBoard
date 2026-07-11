@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
+import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -730,6 +731,10 @@ function SubscriptionModal({ mode, initial, companies, plans, onClose, onSave }:
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SubscriptionsPage() {
+  const { can } = useAuth();
+  const canCreate = can('subscriptions.create');
+  const canUpdate = can('subscriptions.update');
+  const canDelete = can('subscriptions.delete');
   const [section, setSection] = useState<'plans' | 'ledger'>('plans');
 
   const [plans, setPlans]         = useState<ApiPlan[]>([]);
@@ -877,17 +882,17 @@ export default function SubscriptionsPage() {
             {section === 'plans' ? 'Manage subscription plan tiers' : 'Payment ledger — record and track carrier subscriptions'}
           </p>
         </div>
-        {section === 'plans' ? (
+        {section === 'plans' ? (canCreate && (
           <button onClick={() => { setEditPlan(null); setPlanModal('create'); }}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
             <Plus size={15} /> Create Plan
           </button>
-        ) : (
+        )) : (canCreate && (
           <button onClick={() => { setEditSub(null); setSubModal('create'); }}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
             <Plus size={15} /> Record Payment
           </button>
-        )}
+        ))}
       </div>
 
       {/* Section tabs */}
@@ -929,18 +934,24 @@ export default function SubscriptionsPage() {
                       </li>
                     ))}
                   </ul>
+                  {(canUpdate || canDelete) && (
                   <div style={{ paddingTop: 14, borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+                    {canUpdate && (
                     <button onClick={() => { setEditPlan(plan); setPlanModal('edit'); }}
                       style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, cursor: 'pointer', backgroundColor: 'var(--background)', border: '1px solid var(--border)', color: 'var(--foreground)', fontSize: '0.78rem', fontWeight: 500 }}
                       onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)')}
                       onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--background)')}
                     ><Pencil size={13} /> Edit</button>
+                    )}
+                    {canDelete && (
                     <button onClick={() => setDeletePlan(plan)}
                       style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, cursor: 'pointer', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '0.78rem', fontWeight: 500 }}
                       onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = '#FEE2E2')}
                       onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = '#FEF2F2')}
                     ><Trash2 size={13} /> Delete</button>
+                    )}
                   </div>
+                  )}
                 </div>
               ))}
               {plans.length === 0 && (
@@ -1029,16 +1040,21 @@ export default function SubscriptionsPage() {
                         </td>
                         <td style={{ padding: '13px 16px' }}>
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                            {canUpdate && (
                             <button onClick={() => { setEditSub(sub); setSubModal('edit'); }}
                               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500, color: 'var(--foreground)', whiteSpace: 'nowrap' }}
                               onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)')}
                               onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--background)')}
                             ><Pencil size={12} /> Edit</button>
+                            )}
+                            {canDelete && (
                             <button onClick={() => setDeleteSub(sub)}
                               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, border: '1px solid #FECACA', backgroundColor: '#FEF2F2', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500, color: '#DC2626', whiteSpace: 'nowrap' }}
                               onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = '#FEE2E2')}
                               onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = '#FEF2F2')}
                             ><Trash2 size={12} /> Delete</button>
+                            )}
+                            {!canUpdate && !canDelete && <span style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>—</span>}
                           </div>
                         </td>
                       </tr>

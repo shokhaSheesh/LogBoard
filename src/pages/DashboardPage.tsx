@@ -5,6 +5,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts';
 import { Building2, Users, Package, TrendingUp, TrendingDown, ChevronDown, Download, Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 
 // ── API types ─────────────────────────────────────────────────────────────────
@@ -195,6 +196,7 @@ function ChartLoader() {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const { can } = useAuth();
   const [summary, setSummary]     = useState<DashboardSummary | null>(null);
   const [years, setYears]         = useState<string[]>([]);
   const [seriesCache, setSeries]  = useState<Record<string, SeriesMonth[]>>({});
@@ -309,12 +311,14 @@ export default function DashboardPage() {
           >
             {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Export Data
           </button>
-          <Link
-            to="/admin/companies"
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: '#fff', border: 'none', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' }}
-          >
-            + Add Company
-          </Link>
+          {can('companies.create') && (
+            <Link
+              to="/admin/companies"
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: '#fff', border: 'none', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' }}
+            >
+              + Add Company
+            </Link>
+          )}
         </div>
       </div>
 

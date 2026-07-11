@@ -3,6 +3,7 @@ import { Search, Plus, Pencil, Trash2, X, Users, Loader2, Eye, EyeOff, Copy, Che
 import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
+import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -457,6 +458,10 @@ const TABS: TabItem<TabId>[] = [
 const EMPTY_FORM: FormState = { name: '', email: '', phone: '', telegram: '', role: 'owner', status: 'Active', password: '' };
 
 export default function BoardUsersPage() {
+  const { can } = useAuth();
+  const canCreate = can('board_users.create');
+  const canUpdate = can('board_users.update');
+  const canDelete = can('board_users.delete');
   const [rows, setRows]                   = useState<BoardUser[]>([]);
   const [companies, setCompanies]         = useState<ApiCompany[]>([]);
   const [isLoading, setIsLoading]         = useState(true);
@@ -688,6 +693,7 @@ export default function BoardUsersPage() {
           <h1 style={{ color: 'var(--foreground)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>Board Users</h1>
           <p style={{ color: 'var(--muted-foreground)', fontSize: '0.83rem', marginTop: 3 }}>Management of all users within tenant workspaces</p>
         </div>
+        {canCreate && (
         <button
           onClick={() => setCreateOpen(true)}
           disabled={isLoading}
@@ -695,6 +701,7 @@ export default function BoardUsersPage() {
         >
           <Plus size={15} /> Add Board User
         </button>
+        )}
       </div>
 
       {/* Table card */}
@@ -793,18 +800,23 @@ export default function BoardUsersPage() {
                       </td>
                       <td style={{ padding: '11px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                          {canUpdate && (
                           <button onClick={() => openEdit(u)} title="Edit" disabled={editingId === u.id}
                             style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', cursor: editingId === u.id ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: editingId === u.id ? 0.6 : 1 }}
                             onMouseEnter={e => { if (!editingId) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
                             {editingId === u.id ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />}
                           </button>
+                          )}
+                          {canDelete && (
                           <button onClick={() => setDeleteTarget(u)} title="Delete"
                             style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #FECACA', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FEE2E2')}
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FEF2F2')}>
                             <Trash2 size={13} />
                           </button>
+                          )}
+                          {!canUpdate && !canDelete && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>—</span>}
                         </div>
                       </td>
                     </tr>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Shield, Save, Trash2, X, Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
 
@@ -207,6 +208,10 @@ function AddRoleModal({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RolesPermissionsPage() {
+  const { can } = useAuth();
+  const canCreate = can('roles.create');
+  const canUpdate = can('roles.update');
+  const canDelete = can('roles.delete');
   const [roles, setRoles]           = useState<Role[]>([]);
   const [modules, setModules]       = useState<ApiModule[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
@@ -262,6 +267,9 @@ export default function RolesPermissionsPage() {
   const allActions = ACTION_ORDER.filter(a => modules.some(m => m.actions.includes(a)));
   const allKeys: PermKey[] = modules.flatMap(m => m.actions.map(a => `${m.key}.${a}`));
   const selected = roles.find(r => r.id === selectedId) ?? roles[0];
+  // A role's permission matrix is editable only for non-system roles when the
+  // user holds roles.update.
+  const editable = !!selected && !selected.system && canUpdate;
 
   function toggle(key: PermKey) {
     setRoles(prev => prev.map(r => {
@@ -453,7 +461,7 @@ export default function RolesPermissionsPage() {
                     </button>
 
                     {/* Delete button — only for non-system roles */}
-                    {!role.system && (
+                    {!role.system && canDelete && (
                       <button
                         onClick={e => { e.stopPropagation(); setDeleteTarget(role); }}
                         title="Delete role"
@@ -474,6 +482,7 @@ export default function RolesPermissionsPage() {
               })}
             </ul>
 
+            {canCreate && (
             <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border)' }}>
               <button
                 onClick={() => setAddOpen(true)}
@@ -490,6 +499,7 @@ export default function RolesPermissionsPage() {
                 Add New Role
               </button>
             </div>
+            )}
           </div>
 
           {/* ── Right: Matrix ─────────────────────────────────────────── */}
@@ -514,7 +524,7 @@ export default function RolesPermissionsPage() {
               </div>
 
               {/* Global select all */}
-              {!selected.system && (
+              {editable && (
                 <button
                   onClick={toggleAll}
                   style={{
@@ -544,7 +554,7 @@ export default function RolesPermissionsPage() {
                       </th>
                     ))}
                     {/* Row select-all column — only when editable */}
-                    {!selected.system && (
+                    {editable && (
                       <th style={{ width: 80, padding: '10px 16px 10px 0', textAlign: 'center', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
                         All
                       </th>
@@ -575,7 +585,7 @@ export default function RolesPermissionsPage() {
                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                                   <Toggle
                                     checked={selected.permissions.has(key)}
-                                    onChange={selected.system ? () => {} : () => toggle(key)}
+                                    onChange={editable ? () => toggle(key) : () => {}}
                                   />
                                 </div>
                               ) : (
@@ -584,7 +594,7 @@ export default function RolesPermissionsPage() {
                             </td>
                           );
                         })}
-                        {!selected.system && (
+                        {editable && (
                           <td style={{ width: 80, textAlign: 'center', padding: '16px 16px 16px 0' }}>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
                               <Toggle checked={rowAllOn} onChange={() => toggleRow(mod)} />
@@ -603,7 +613,7 @@ export default function RolesPermissionsPage() {
               {saveError && (
                 <span style={{ fontSize: '0.78rem', color: '#DC2626', marginRight: 'auto' }}>{saveError}</span>
               )}
-              {!selected.system && (
+              {editable && (
                 <>
                   <button
                     onClick={resetChanges}
@@ -635,9 +645,9 @@ export default function RolesPermissionsPage() {
                   </button>
                 </>
               )}
-              {selected.system && (
+              {!editable && (
                 <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', fontStyle: 'italic' }}>
-                  System roles are read-only.
+                  {selected.system ? 'System roles are read-only.' : "You don't have permission to edit roles."}
                 </span>
               )}
             </div>

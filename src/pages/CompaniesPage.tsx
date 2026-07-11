@@ -7,6 +7,7 @@ import {
 import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
+import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -954,6 +955,10 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CompaniesPage() {
+  const { can } = useAuth();
+  const canCreate = can('companies.create');
+  const canUpdate = can('companies.update');
+  const canDelete = can('companies.delete');
   const [rows, setRows]                 = useState<Company[]>([]);
   const [plans, setPlans]               = useState<FetchedPlan[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
@@ -1140,12 +1145,14 @@ export default function CompaniesPage() {
           >
             <Download size={15} /> Export
           </button>
+          {canCreate && (
           <button
             onClick={() => setCreateOpen(true)}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg,#2563EB 0%,#1D4ED8 100%)', border: 'none', cursor: 'pointer' }}
           >
             <Plus size={15} /> New Company
           </button>
+          )}
         </div>
       </div>
 
@@ -1270,18 +1277,23 @@ export default function CompaniesPage() {
 
                       <td style={{ padding: '11px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                          {canUpdate && (
                           <button onClick={() => setEditTarget(c)} title="Edit"
                             style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
                             <Pencil size={13} />
                           </button>
+                          )}
+                          {canDelete && (
                           <button onClick={() => setDeleteTarget(c)} title="Delete"
                             style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #FECACA', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FEE2E2')}
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FEF2F2')}>
                             <Trash2 size={13} />
                           </button>
+                          )}
+                          {!canUpdate && !canDelete && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>—</span>}
                         </div>
                       </td>
                     </tr>
