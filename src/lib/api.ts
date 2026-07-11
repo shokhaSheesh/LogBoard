@@ -39,9 +39,23 @@ async function request<T>(path: string, init: RequestInit = {}, unwrapData = tru
   return (unwrapData ? body.data : body) as T;
 }
 
+async function requestBlob(path: string): Promise<Blob> {
+  const token = getToken();
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (!res.ok) {
+    let code = 'internal', message = 'Unexpected error';
+    try { const body = await res.json(); code = body.error?.code ?? code; message = body.error?.message ?? message; } catch { /* non-JSON error body */ }
+    throw new ApiException(res.status, code, message);
+  }
+  return res.blob();
+}
+
 export const api = {
   get:     <T>(path: string)                => request<T>(path),
   getBody: <T>(path: string)                => request<T>(path, {}, false),
+  getBlob:    (path: string)                => requestBlob(path),
   post:    <T>(path: string, body: unknown) => request<T>(path, { method: 'POST',   body: JSON.stringify(body) }),
   put:     <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT',    body: JSON.stringify(body) }),
   patch:   <T>(path: string, body: unknown) => request<T>(path, { method: 'PATCH',  body: JSON.stringify(body) }),
