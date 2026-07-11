@@ -33,6 +33,12 @@ const NAV_ITEMS: NavItemDef[] = [
   { path: '/admin/permission-modules', label: 'Perm. Modules',      icon: <Layers size={18} /> },
 ];
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
 function NavItem({ item, collapsed }: { item: NavItemDef; collapsed: boolean }) {
   const [hovered, setHovered] = useState(false);
 
@@ -100,7 +106,10 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
-  const { can, permsLoaded } = useAuth();
+  const { user, can, permsLoaded } = useAuth();
+  const displayName  = user?.full_name || user?.email || 'Account';
+  const displayEmail = user?.email || user?.full_name || '';
+  const initials     = getInitials(displayName);
   // Until permissions resolve, show everything (avoids a flash of an empty menu);
   // once loaded, hide any screen the role can't read.
   const visibleItems = permsLoaded
@@ -179,10 +188,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <div className="flex justify-center">
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center"
-              title="Sarah Adams"
+              title={displayName}
               style={{ background: 'linear-gradient(135deg, #3B82F6, #6366F1)', cursor: 'default' }}
             >
-              <span style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 700 }}>SA</span>
+              <span style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 700 }}>{initials}</span>
             </div>
           </div>
         ) : (
@@ -194,7 +203,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
               style={{ background: 'linear-gradient(135deg, #3B82F6, #6366F1)' }}
             >
-              <span style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 700 }}>SA</span>
+              <span style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 700 }}>{initials}</span>
             </div>
             <div className="flex-1 min-w-0">
               <div
@@ -208,7 +217,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   textOverflow: 'ellipsis',
                 }}
               >
-                Sarah Adams
+                {displayName}
               </div>
               <div
                 style={{
@@ -221,7 +230,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   textOverflow: 'ellipsis',
                 }}
               >
-                sarah@fleetadmin.io
+                {displayEmail}
               </div>
             </div>
             <ChevronRight size={14} className="shrink-0" style={{ color: 'var(--sidebar-foreground)', opacity: 0.5 }} />

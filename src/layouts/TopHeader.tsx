@@ -21,10 +21,17 @@ interface TopHeaderProps {
   onToggleSidebar: () => void;
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
 export function TopHeader({ onToggleSidebar }: TopHeaderProps) {
   const { pathname } = useLocation();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const breadcrumbs = BREADCRUMB_MAP[pathname] ?? [{ label: 'Home' }, { label: pathname.split('/').pop() ?? '', active: true }];
+  const displayName = user?.full_name || user?.email || 'Account';
 
   return (
     <header
@@ -76,9 +83,10 @@ export function TopHeader({ onToggleSidebar }: TopHeaderProps) {
         {/* Avatar */}
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer"
+          title={displayName}
           style={{ background: 'linear-gradient(135deg, #3B82F6, #6366F1)' }}
         >
-          <span style={{ color: '#ffffff', fontSize: '0.75rem', fontWeight: 700 }}>SA</span>
+          <span style={{ color: '#ffffff', fontSize: '0.75rem', fontWeight: 700 }}>{getInitials(displayName)}</span>
         </div>
 
         {/* Logout */}
