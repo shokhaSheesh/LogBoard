@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   CheckCircle2, Plus, Pencil, Trash2, X, Loader2,
   ChevronLeft, ChevronRight, ChevronDown,
-  CreditCard, Clock, XCircle, Activity,
+  CreditCard, Clock, XCircle, Activity, Users,
 } from 'lucide-react';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
@@ -15,7 +15,7 @@ type SubStatus = 'Active' | 'Pending' | 'Suspended';
 
 interface ApiPlan {
   id: string; name: string; color: string; price: number;
-  duration: number; features: string[]; popular: boolean;
+  duration: number; max_drivers: number; features: string[]; popular: boolean;
 }
 interface ApiCompanyLight { id: string; name: string; mc: string; }
 interface ApiSubscription {
@@ -27,7 +27,7 @@ interface ApiSubscription {
 }
 interface PlanForm {
   name: string; color: string; price: string; duration: string;
-  features: string[]; popular: boolean;
+  max_drivers: string; features: string[]; popular: boolean;
 }
 interface SubForm {
   company_id: string; plan_id: string; amount_paid: string; currency: string;
@@ -46,7 +46,7 @@ const SUB_STATUS: Record<SubStatus, { dot: string; color: string; bg: string; bo
   Suspended: { dot: '#EF4444', color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
 };
 
-const EMPTY_PLAN_FORM: PlanForm = { name: '', color: COLOR_PRESETS[0], price: '', duration: '', features: ['', '', '', ''], popular: false };
+const EMPTY_PLAN_FORM: PlanForm = { name: '', color: COLOR_PRESETS[0], price: '', duration: '', max_drivers: '', features: ['', '', '', ''], popular: false };
 const PER_PAGE = 10;
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -507,16 +507,21 @@ function PlanModal({ mode, initial, onClose, onSave }: {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               <div>
                 <label style={labelStyle}>Price ($)</label>
-                <input type="number" min={0} value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="e.g. 149" style={inp} required />
+                <input type="number" min={0} value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="149" style={inp} required />
               </div>
               <div>
                 <label style={labelStyle}>Duration (days) <span style={{ color: '#EF4444' }}>*</span></label>
-                <input type="number" min={1} value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} placeholder="e.g. 30" style={inp} required />
+                <input type="number" min={1} value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} placeholder="30" style={inp} required />
+              </div>
+              <div>
+                <label style={labelStyle}>Max Drivers</label>
+                <input type="number" min={0} value={form.max_drivers} onChange={e => setForm(f => ({ ...f, max_drivers: e.target.value }))} placeholder="0 = ∞" style={inp} />
               </div>
             </div>
+            <p style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginTop: -6 }}>Max Drivers — the driver cap for companies on this plan. <strong>0 = unlimited.</strong></p>
 
             <div>
               <label style={labelStyle}>Features</label>
@@ -784,10 +789,11 @@ export default function SubscriptionsPage() {
   }, [section, fetchSubs]);
 
   async function handlePlanSave(f: PlanForm): Promise<void> {
-    const price    = parseInt(f.price)    || 0;
-    const duration = parseInt(f.duration) || 30;
-    const features = f.features.filter(ft => ft.trim() !== '');
-    const payload  = { name: f.name, color: f.color, price, duration, features, popular: f.popular };
+    const price       = parseInt(f.price)    || 0;
+    const duration    = parseInt(f.duration) || 30;
+    const max_drivers = parseInt(f.max_drivers) || 0;
+    const features    = f.features.filter(ft => ft.trim() !== '');
+    const payload     = { name: f.name, color: f.color, price, duration, max_drivers, features, popular: f.popular };
     if (planModal === 'create') {
       const created = await api.post<ApiPlan>('/plans', payload);
       setPlans(p => [...p, created]);
@@ -839,7 +845,7 @@ export default function SubscriptionsPage() {
   }
 
   const planInitial: PlanForm = editPlan
-    ? { name: editPlan.name, color: editPlan.color, price: String(editPlan.price), duration: String(editPlan.duration), features: [...editPlan.features, ''], popular: editPlan.popular }
+    ? { name: editPlan.name, color: editPlan.color, price: String(editPlan.price), duration: String(editPlan.duration), max_drivers: String(editPlan.max_drivers ?? 0), features: [...editPlan.features, ''], popular: editPlan.popular }
     : EMPTY_PLAN_FORM;
 
   const subInitial: SubForm = editSub
@@ -911,6 +917,10 @@ export default function SubscriptionsPage() {
                       <span style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--foreground)', lineHeight: 1 }}>${plan.price}</span>
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', marginTop: 4 }}>{plan.duration} day{plan.duration !== 1 ? 's' : ''} billing cycle</div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, backgroundColor: 'var(--muted)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px' }}>
+                      <Users size={12} style={{ color: 'var(--muted-foreground)' }} />
+                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--foreground)' }}>{plan.max_drivers === 0 ? 'Unlimited drivers' : `Up to ${plan.max_drivers} driver${plan.max_drivers !== 1 ? 's' : ''}`}</span>
+                    </div>
                   </div>
                   <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', display: 'flex', flexDirection: 'column', gap: 7 }}>
                     {plan.features.map(f => (
