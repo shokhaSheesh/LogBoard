@@ -30,12 +30,12 @@ function CustomSelect({ value, options, onChange }: {
       <button type="button" onClick={() => setOpen(o => !o)}
         style={{
           width: '100%', height: 38, padding: '0 11px', borderRadius: 8,
-          border: `1px solid ${open ? '#93C5FD' : 'var(--border)'}`,
+          border: `1px solid ${open ? '#8FD3AE' : 'var(--border)'}`,
           fontSize: '0.83rem', color: 'var(--foreground)', backgroundColor: 'var(--background)',
           cursor: 'pointer', display: 'flex', alignItems: 'center',
           justifyContent: 'space-between', gap: 6, outline: 'none', boxSizing: 'border-box',
         }}
-        onMouseEnter={e => { if (!open) e.currentTarget.style.borderColor = '#93C5FD'; }}
+        onMouseEnter={e => { if (!open) e.currentTarget.style.borderColor = '#8FD3AE'; }}
         onMouseLeave={e => { if (!open) e.currentTarget.style.borderColor = 'var(--border)'; }}
       >
         <span>{display}</span>
@@ -53,8 +53,8 @@ function CustomSelect({ value, options, onChange }: {
               style={{
                 width: '100%', padding: '8px 12px', textAlign: 'left', fontSize: '0.82rem',
                 border: 'none', cursor: 'pointer', display: 'block',
-                backgroundColor: o.id === value ? '#EFF6FF' : 'transparent',
-                color: o.id === value ? '#2563EB' : 'var(--foreground)',
+                backgroundColor: o.id === value ? '#ECF7F0' : 'transparent',
+                color: o.id === value ? '#178A4C' : 'var(--foreground)',
                 fontWeight: o.id === value ? 600 : 400,
               }}
               onMouseEnter={e => { if (o.id !== value) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
@@ -200,7 +200,7 @@ function CredsModal({ name, login, password, onClose }: {
           {row('Password', password, 'pass')}
         </div>
         <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)' }}>
-          <button onClick={onClose} style={{ width: '100%', height: 38, borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
+          <button onClick={onClose} style={{ width: '100%', height: 38, borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
             Done
           </button>
         </div>
@@ -368,7 +368,7 @@ function AdminModal({
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               {saving && <Loader2 size={14} className="animate-spin" />}
               {saving ? 'Saving…' : (mode === 'create' ? 'Add Admin' : 'Save Changes')}
             </button>
@@ -445,7 +445,7 @@ function AdminDetailModal({
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
             Close
           </button>
-          <button onClick={onEdit} style={{ flex: 2, height: 38, borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
+          <button onClick={onEdit} style={{ flex: 2, height: 38, borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
             Edit Admin
           </button>
         </div>
@@ -627,7 +627,7 @@ export default function AdminUsersPage() {
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
         {[
-          { label: 'Total',     value: allCounts.total,     iconBg: '#2563EB' },
+          { label: 'Total',     value: allCounts.total,     iconBg: '#178A4C' },
           { label: 'Active',    value: allCounts.active,    iconBg: '#10B981' },
           { label: 'Suspended', value: allCounts.suspended, iconBg: '#EF4444' },
         ].map(({ label, value, iconBg }) => (
@@ -655,7 +655,7 @@ export default function AdminUsersPage() {
         <button
           onClick={() => setCreateOpen(true)}
           disabled={isLoading}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: isLoading ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600, opacity: isLoading ? 0.6 : 1 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: isLoading ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600, opacity: isLoading ? 0.6 : 1 }}
         >
           <Plus size={15} /> Add Admin
         </button>
@@ -772,7 +772,7 @@ export default function AdminUsersPage() {
               {Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1).map((p, idx, arr) => (
                 <span key={p} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   {idx > 0 && arr[idx - 1] !== p - 1 && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', padding: '0 2px' }}>…</span>}
-                  <button onClick={() => goPage(p)} style={{ width: 30, height: 30, borderRadius: 7, border: 'none', backgroundColor: p === page ? '#2563EB' : 'transparent', color: p === page ? '#fff' : 'var(--muted-foreground)', fontSize: '0.78rem', fontWeight: p === page ? 600 : 400, cursor: 'pointer' }}>{p}</button>
+                  <button onClick={() => goPage(p)} style={{ width: 30, height: 30, borderRadius: 7, border: 'none', backgroundColor: p === page ? '#178A4C' : 'transparent', color: p === page ? '#fff' : 'var(--muted-foreground)', fontSize: '0.78rem', fontWeight: p === page ? 600 : 400, cursor: 'pointer' }}>{p}</button>
                 </span>
               ))}
               <button onClick={() => goPage(page + 1)} disabled={page === totalPages} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: page === totalPages ? 'var(--muted-foreground)' : 'var(--foreground)', fontSize: '0.78rem', fontWeight: 500, cursor: page === totalPages ? 'default' : 'pointer' }}>Next</button>

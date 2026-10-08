@@ -203,7 +203,7 @@ function ComposeModal({ users, companies, adminRoles, onClose, onSent }: {
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}
             >Cancel</button>
             <button type="submit" disabled={saving}
-              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.8 : 1 }}
+              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.8 : 1 }}
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               {saving ? 'Sending…' : 'Send Notification'}
@@ -403,7 +403,7 @@ export default function NotificationsPage() {
         </div>
         {can('notifications.create') && (
           <button onClick={() => setComposeOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
             <Plus size={15} /> Send Notification
           </button>
         )}
@@ -414,7 +414,7 @@ export default function NotificationsPage() {
         <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
           <input value={searchInput} onChange={e => setSearchInput(e.target.value)} placeholder="Search title or message…"
             style={{ width: '100%', height: 38, padding: '0 12px', borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--card)', color: 'var(--foreground)', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#93C5FD')}
+            onFocus={e => (e.currentTarget.style.borderColor = '#8FD3AE')}
             onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
           />
         </div>

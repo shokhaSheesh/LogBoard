@@ -159,8 +159,8 @@ function CustomSelect({ value, options, onChange }: {
   return (
     <>
       <button ref={trigRef} type="button" onClick={toggle}
-        style={{ width: '100%', padding: '7px 11px', borderRadius: 8, border: `1px solid ${open ? '#93C5FD' : 'var(--border)'}`, fontSize: '0.82rem', color: 'var(--foreground)', backgroundColor: 'var(--card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, outline: 'none', boxSizing: 'border-box' }}
-        onMouseEnter={e => { if (!open) (e.currentTarget.style.borderColor = '#93C5FD'); }}
+        style={{ width: '100%', padding: '7px 11px', borderRadius: 8, border: `1px solid ${open ? '#8FD3AE' : 'var(--border)'}`, fontSize: '0.82rem', color: 'var(--foreground)', backgroundColor: 'var(--card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, outline: 'none', boxSizing: 'border-box' }}
+        onMouseEnter={e => { if (!open) (e.currentTarget.style.borderColor = '#8FD3AE'); }}
         onMouseLeave={e => { if (!open) (e.currentTarget.style.borderColor = 'var(--border)'); }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value || <span style={{ color: 'var(--muted-foreground)' }}>Select…</span>}</span>
@@ -170,7 +170,7 @@ function CustomSelect({ value, options, onChange }: {
         <div ref={popRef} style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 9999, backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', overflow: 'hidden', maxHeight: 220, overflowY: 'auto', opacity: ready ? 1 : 0, transition: 'opacity 80ms' }}>
           {options.map(o => (
             <button key={o} type="button" onClick={() => { onChange(o); setOpen(false); }}
-              style={{ width: '100%', padding: '8px 12px', textAlign: 'left', fontSize: '0.82rem', border: 'none', cursor: 'pointer', display: 'block', backgroundColor: o === value ? '#EFF6FF' : 'transparent', color: o === value ? '#2563EB' : 'var(--foreground)', fontWeight: o === value ? 600 : 400 }}
+              style={{ width: '100%', padding: '8px 12px', textAlign: 'left', fontSize: '0.82rem', border: 'none', cursor: 'pointer', display: 'block', backgroundColor: o === value ? '#ECF7F0' : 'transparent', color: o === value ? '#178A4C' : 'var(--foreground)', fontWeight: o === value ? 600 : 400 }}
               onMouseEnter={e => { if (o !== value) (e.currentTarget.style.backgroundColor = 'var(--muted)'); }}
               onMouseLeave={e => { if (o !== value) (e.currentTarget.style.backgroundColor = 'transparent'); }}
             >{o}</button>
@@ -241,8 +241,8 @@ function SelectPicker({ value, options, placeholder, onChange }: {
   return (
     <>
       <button ref={trigRef} type="button" onClick={toggle}
-        style={{ width: '100%', padding: '7px 11px', borderRadius: 8, border: `1px solid ${open ? '#93C5FD' : 'var(--border)'}`, fontSize: '0.82rem', color: selectedLabel ? 'var(--foreground)' : 'var(--muted-foreground)', backgroundColor: 'var(--card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, outline: 'none', boxSizing: 'border-box' }}
-        onMouseEnter={e => { if (!open) (e.currentTarget.style.borderColor = '#93C5FD'); }}
+        style={{ width: '100%', padding: '7px 11px', borderRadius: 8, border: `1px solid ${open ? '#8FD3AE' : 'var(--border)'}`, fontSize: '0.82rem', color: selectedLabel ? 'var(--foreground)' : 'var(--muted-foreground)', backgroundColor: 'var(--card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, outline: 'none', boxSizing: 'border-box' }}
+        onMouseEnter={e => { if (!open) (e.currentTarget.style.borderColor = '#8FD3AE'); }}
         onMouseLeave={e => { if (!open) (e.currentTarget.style.borderColor = 'var(--border)'); }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLabel || placeholder}</span>
@@ -258,7 +258,7 @@ function SelectPicker({ value, options, placeholder, onChange }: {
               onChange={e => setQuery(e.target.value)}
               placeholder="Search…"
               style={{ width: '100%', height: 32, padding: '0 10px', borderRadius: 6, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box' }}
-              onFocus={e => (e.currentTarget.style.borderColor = '#93C5FD')}
+              onFocus={e => (e.currentTarget.style.borderColor = '#8FD3AE')}
               onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
             />
           </div>
@@ -266,7 +266,7 @@ function SelectPicker({ value, options, placeholder, onChange }: {
           <div style={{ maxHeight: 220, overflowY: 'auto' }}>
             {filtered.map(o => (
               <button key={o.value} type="button" onClick={() => { onChange(o.value); setOpen(false); }}
-                style={{ width: '100%', padding: '9px 12px', textAlign: 'left', fontSize: '0.82rem', border: 'none', cursor: 'pointer', display: 'block', backgroundColor: o.value === value ? '#EFF6FF' : 'transparent', color: o.value === value ? '#2563EB' : 'var(--foreground)', fontWeight: o.value === value ? 600 : 400 }}
+                style={{ width: '100%', padding: '9px 12px', textAlign: 'left', fontSize: '0.82rem', border: 'none', cursor: 'pointer', display: 'block', backgroundColor: o.value === value ? '#ECF7F0' : 'transparent', color: o.value === value ? '#178A4C' : 'var(--foreground)', fontWeight: o.value === value ? 600 : 400 }}
                 onMouseEnter={e => { if (o.value !== value) (e.currentTarget.style.backgroundColor = 'var(--muted)'); }}
                 onMouseLeave={e => { if (o.value !== value) (e.currentTarget.style.backgroundColor = 'transparent'); }}
               >{o.label}</button>
@@ -356,8 +356,8 @@ function DatePicker({ value, onChange, placeholder = 'Select date' }: {
   return (
     <>
       <button ref={trigRef} type="button" onClick={handleOpen}
-        style={{ width: '100%', padding: '7px 11px', borderRadius: 8, border: `1px solid ${open ? '#93C5FD' : 'var(--border)'}`, fontSize: '0.82rem', backgroundColor: 'var(--card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, color: value ? 'var(--foreground)' : 'var(--muted-foreground)', outline: 'none', boxSizing: 'border-box' }}
-        onMouseEnter={e => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = '#93C5FD'; }}
+        style={{ width: '100%', padding: '7px 11px', borderRadius: 8, border: `1px solid ${open ? '#8FD3AE' : 'var(--border)'}`, fontSize: '0.82rem', backgroundColor: 'var(--card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, color: value ? 'var(--foreground)' : 'var(--muted-foreground)', outline: 'none', boxSizing: 'border-box' }}
+        onMouseEnter={e => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = '#8FD3AE'; }}
         onMouseLeave={e => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
       >
         <span>{value || placeholder}</span>
@@ -382,7 +382,7 @@ function DatePicker({ value, onChange, placeholder = 'Select date' }: {
               {days.map((d, i) => (
                 <button key={i} type="button" disabled={!d}
                   onClick={() => d && (onChange(fmtDStr(new Date(cur.y, cur.m, d))), setOpen(false))}
-                  style={{ aspectRatio: '1', borderRadius: '50%', border: 'none', cursor: d ? 'pointer' : 'default', fontSize: '0.78rem', fontWeight: d === selDay || (d !== null && isToday(d)) ? 600 : 400, backgroundColor: d === selDay ? '#2563EB' : 'transparent', color: d === selDay ? '#fff' : (d !== null && isToday(d)) ? '#2563EB' : d ? 'var(--foreground)' : 'transparent', outline: (d !== null && isToday(d) && d !== selDay) ? '2px solid #2563EB' : 'none', outlineOffset: -2 }}
+                  style={{ aspectRatio: '1', borderRadius: '50%', border: 'none', cursor: d ? 'pointer' : 'default', fontSize: '0.78rem', fontWeight: d === selDay || (d !== null && isToday(d)) ? 600 : 400, backgroundColor: d === selDay ? '#178A4C' : 'transparent', color: d === selDay ? '#fff' : (d !== null && isToday(d)) ? '#178A4C' : d ? 'var(--foreground)' : 'transparent', outline: (d !== null && isToday(d) && d !== selDay) ? '2px solid #178A4C' : 'none', outlineOffset: -2 }}
                   onMouseEnter={e => { if (d && d !== selDay) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
                   onMouseLeave={e => { if (d !== selDay) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
                 >{d ?? ''}</button>
@@ -409,9 +409,9 @@ function DatePicker({ value, onChange, placeholder = 'Select date' }: {
                 const isCur = today.getFullYear() === cur.y && today.getMonth() === mi;
                 return (
                   <button key={m} type="button" onClick={() => { setCur(c => ({ ...c, m: mi })); setView('day'); }}
-                    style={{ padding: '9px 4px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: isSel || isCur ? 600 : 400, backgroundColor: isSel ? '#2563EB' : isCur ? '#EFF6FF' : 'transparent', color: isSel ? '#fff' : isCur ? '#2563EB' : 'var(--foreground)' }}
-                    onMouseEnter={e => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#DBEAFE' : 'var(--muted)'; }}
-                    onMouseLeave={e => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#EFF6FF' : 'transparent'; }}
+                    style={{ padding: '9px 4px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: isSel || isCur ? 600 : 400, backgroundColor: isSel ? '#178A4C' : isCur ? '#ECF7F0' : 'transparent', color: isSel ? '#fff' : isCur ? '#178A4C' : 'var(--foreground)' }}
+                    onMouseEnter={e => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#DDF1E5' : 'var(--muted)'; }}
+                    onMouseLeave={e => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#ECF7F0' : 'transparent'; }}
                   >{m}</button>
                 );
               })}
@@ -430,9 +430,9 @@ function DatePicker({ value, onChange, placeholder = 'Select date' }: {
                 const isCur = today.getFullYear() === y;
                 return (
                   <button key={y} type="button" onClick={() => { setCur(c => ({ ...c, y })); setView('month'); }}
-                    style={{ padding: '9px 4px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: isSel || isCur ? 600 : 400, backgroundColor: isSel ? '#2563EB' : isCur ? '#EFF6FF' : 'transparent', color: isSel ? '#fff' : isCur ? '#2563EB' : 'var(--foreground)' }}
-                    onMouseEnter={e => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#DBEAFE' : 'var(--muted)'; }}
-                    onMouseLeave={e => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#EFF6FF' : 'transparent'; }}
+                    style={{ padding: '9px 4px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: isSel || isCur ? 600 : 400, backgroundColor: isSel ? '#178A4C' : isCur ? '#ECF7F0' : 'transparent', color: isSel ? '#fff' : isCur ? '#178A4C' : 'var(--foreground)' }}
+                    onMouseEnter={e => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#DDF1E5' : 'var(--muted)'; }}
+                    onMouseLeave={e => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#ECF7F0' : 'transparent'; }}
                   >{y}</button>
                 );
               })}
@@ -549,7 +549,7 @@ function PlanModal({ mode, initial, onClose, onSave }: {
 
             <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
               <div onClick={() => setForm(f => ({ ...f, popular: !f.popular }))}
-                style={{ width: 38, height: 22, borderRadius: 99, flexShrink: 0, backgroundColor: form.popular ? '#2563EB' : 'var(--muted)', position: 'relative', transition: 'background 0.2s', cursor: 'pointer' }}>
+                style={{ width: 38, height: 22, borderRadius: 99, flexShrink: 0, backgroundColor: form.popular ? '#178A4C' : 'var(--muted)', position: 'relative', transition: 'background 0.2s', cursor: 'pointer' }}>
                 <div style={{ position: 'absolute', top: 3, left: form.popular ? 19 : 3, width: 16, height: 16, borderRadius: '50%', backgroundColor: '#fff', transition: 'left 0.2s' }} />
               </div>
               <span style={{ fontSize: '0.82rem', color: 'var(--foreground)', fontWeight: 500 }}>Mark as Most Popular</span>
@@ -565,7 +565,7 @@ function PlanModal({ mode, initial, onClose, onSave }: {
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}
             >Cancel</button>
             <button type="submit" disabled={saving}
-              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.8 : 1 }}
+              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.8 : 1 }}
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
               {mode === 'create' ? 'Create Plan' : 'Save Changes'}
@@ -716,7 +716,7 @@ function SubscriptionModal({ mode, initial, companies, plans, onClose, onSave }:
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}
             >Cancel</button>
             <button type="submit" disabled={saving}
-              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.8 : 1 }}
+              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.8 : 1 }}
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
               {mode === 'create' ? 'Record Payment' : 'Save Changes'}
@@ -884,12 +884,12 @@ export default function SubscriptionsPage() {
         </div>
         {section === 'plans' ? (canCreate && (
           <button onClick={() => { setEditPlan(null); setPlanModal('create'); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
             <Plus size={15} /> Create Plan
           </button>
         )) : (canCreate && (
           <button onClick={() => { setEditSub(null); setSubModal('create'); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
             <Plus size={15} /> Record Payment
           </button>
         ))}
@@ -899,7 +899,7 @@ export default function SubscriptionsPage() {
       <div style={{ display: 'flex', gap: 2, marginBottom: 24, borderBottom: '2px solid var(--border)' }}>
         {(['plans', 'ledger'] as const).map(s => (
           <button key={s} onClick={() => setSection(s)}
-            style={{ padding: '8px 18px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${section === s ? '#2563EB' : 'transparent'}`, marginBottom: -2, color: section === s ? '#2563EB' : 'var(--muted-foreground)', transition: 'color 0.15s' }}
+            style={{ padding: '8px 18px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${section === s ? '#178A4C' : 'transparent'}`, marginBottom: -2, color: section === s ? '#178A4C' : 'var(--muted-foreground)', transition: 'color 0.15s' }}
           >
             {s === 'plans' ? 'Plans' : 'Payment Ledger'}
           </button>
@@ -970,7 +970,7 @@ export default function SubscriptionsPage() {
           {/* KPI cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
             {[
-              { label: 'Total',     value: subCounts.total,     icon: <Activity size={18} />,   iconBg: '#EFF6FF', iconColor: '#2563EB' },
+              { label: 'Total',     value: subCounts.total,     icon: <Activity size={18} />,   iconBg: '#ECF7F0', iconColor: '#178A4C' },
               { label: 'Active',    value: subCounts.active,    icon: <CreditCard size={18} />, iconBg: '#F0FDF4', iconColor: '#16A34A' },
               { label: 'Pending',   value: subCounts.pending,   icon: <Clock size={18} />,      iconBg: '#FFFBEB', iconColor: '#D97706' },
               { label: 'Suspended', value: subCounts.suspended, icon: <XCircle size={18} />,    iconBg: '#FEF2F2', iconColor: '#DC2626' },

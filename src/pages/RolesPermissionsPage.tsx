@@ -42,7 +42,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
       onClick={onChange}
       style={{
         width: 36, height: 20, borderRadius: 99, flexShrink: 0,
-        backgroundColor: checked ? '#2563EB' : 'var(--muted)',
+        backgroundColor: checked ? '#178A4C' : 'var(--muted)',
         position: 'relative', cursor: 'pointer',
         transition: 'background-color 0.2s',
       }}
@@ -189,7 +189,7 @@ function AddRoleModal({
               disabled={saving}
               style={{
                 flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer',
-                background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)',
                 border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff',
                 fontSize: '0.83rem', fontWeight: 600,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -441,16 +441,16 @@ export default function RolesPermissionsPage() {
                         width: '100%', textAlign: 'left',
                         padding: role.system ? '10px 16px' : '10px 40px 10px 16px',
                         background: 'none', border: 'none', cursor: 'pointer',
-                        borderLeft: `3px solid ${active ? '#2563EB' : 'transparent'}`,
-                        backgroundColor: active ? '#EFF6FF' : 'transparent',
+                        borderLeft: `3px solid ${active ? '#178A4C' : 'transparent'}`,
+                        backgroundColor: active ? '#ECF7F0' : 'transparent',
                         display: 'flex', alignItems: 'center', gap: 10,
                       }}
                       onMouseEnter={e => { if (!active) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
                       onMouseLeave={e => { if (!active) e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >
-                      <Shield size={15} style={{ flexShrink: 0, color: active ? '#2563EB' : 'var(--muted-foreground)' }} />
+                      <Shield size={15} style={{ flexShrink: 0, color: active ? '#178A4C' : 'var(--muted-foreground)' }} />
                       <div>
-                        <div style={{ fontSize: '0.83rem', fontWeight: active ? 600 : 400, color: active ? '#1D4ED8' : 'var(--foreground)', lineHeight: 1.3 }}>
+                        <div style={{ fontSize: '0.83rem', fontWeight: active ? 600 : 400, color: active ? '#136F3D' : 'var(--foreground)', lineHeight: 1.3 }}>
                           {role.name}
                         </div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginTop: 1 }}>
@@ -529,9 +529,9 @@ export default function RolesPermissionsPage() {
                   onClick={toggleAll}
                   style={{
                     padding: '6px 14px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
-                    backgroundColor: allOn ? '#EFF6FF' : 'var(--background)',
-                    border: `1px solid ${allOn ? '#93C5FD' : 'var(--border)'}`,
-                    color: allOn ? '#2563EB' : 'var(--foreground)',
+                    backgroundColor: allOn ? '#ECF7F0' : 'var(--background)',
+                    border: `1px solid ${allOn ? '#8FD3AE' : 'var(--border)'}`,
+                    color: allOn ? '#178A4C' : 'var(--foreground)',
                     fontSize: '0.78rem', fontWeight: 600,
                   }}
                 >
@@ -635,7 +635,7 @@ export default function RolesPermissionsPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6,
                       padding: '8px 18px', borderRadius: 8, cursor: dirty && !saving ? 'pointer' : 'default',
-                      background: dirty && !saving ? 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' : 'var(--muted)',
+                      background: dirty && !saving ? 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)' : 'var(--muted)',
                       border: 'none', color: dirty && !saving ? '#fff' : 'var(--muted-foreground)',
                       fontSize: '0.82rem', fontWeight: 600, transition: 'background 0.2s',
                     }}

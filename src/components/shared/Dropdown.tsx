@@ -32,11 +32,11 @@ export function Dropdown<T extends string>({
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1.5 rounded-lg px-3 py-2 transition-colors"
         style={{
-          backgroundColor: isActive ? '#EFF6FF' : 'var(--card)',
-          border: `1px solid ${isActive ? '#93C5FD' : 'var(--border)'}`,
+          backgroundColor: isActive ? '#ECF7F0' : 'var(--card)',
+          border: `1px solid ${isActive ? '#8FD3AE' : 'var(--border)'}`,
           fontSize: '0.8rem',
           fontWeight: 500,
-          color: isActive ? '#2563EB' : 'var(--foreground)',
+          color: isActive ? '#178A4C' : 'var(--foreground)',
           whiteSpace: 'nowrap',
         }}
       >
@@ -67,8 +67,8 @@ export function Dropdown<T extends string>({
                   style={{
                     fontSize: '0.8rem',
                     fontWeight: selected ? 600 : 400,
-                    color: selected ? '#2563EB' : 'var(--foreground)',
-                    backgroundColor: selected ? '#EFF6FF' : 'transparent',
+                    color: selected ? '#178A4C' : 'var(--foreground)',
+                    backgroundColor: selected ? '#ECF7F0' : 'transparent',
                   }}
                   onMouseEnter={(e) => {
                     if (!selected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)';

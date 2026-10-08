@@ -92,7 +92,7 @@ function YearPicker({ value, options, onChange }: { value: string; options: stri
           <div style={{ position: 'absolute', right: 0, top: 38, zIndex: 20, backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', minWidth: 88, maxHeight: 220, overflowY: 'auto' }}>
             {options.map((y) => (
               <button key={y} onClick={() => { onChange(y); setOpen(false); }}
-                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 14px', fontSize: '0.8rem', border: 'none', cursor: 'pointer', fontWeight: y === value ? 600 : 400, color: y === value ? '#2563EB' : 'var(--foreground)', backgroundColor: y === value ? '#EFF6FF' : 'transparent' }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 14px', fontSize: '0.8rem', border: 'none', cursor: 'pointer', fontWeight: y === value ? 600 : 400, color: y === value ? '#178A4C' : 'var(--foreground)', backgroundColor: y === value ? '#ECF7F0' : 'transparent' }}
                 onMouseEnter={(e) => { if (y !== value) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
                 onMouseLeave={(e) => { if (y !== value) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
               >{y}</button>
@@ -280,9 +280,9 @@ export default function DashboardPage() {
 
       {/* ── Row 1: Stat Cards ───────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
-        <StatCard label="Total Companies"     value={kpis.companies.value}     delta={kpis.companies.delta_pct}     icon={<Building2 size={20} />} color="#2563EB" bg="#EFF6FF" spark={kpis.companies.spark} />
+        <StatCard label="Total Companies"     value={kpis.companies.value}     delta={kpis.companies.delta_pct}     icon={<Building2 size={20} />} color="#178A4C" bg="#ECF7F0" spark={kpis.companies.spark} />
         <StatCard label="Total Drivers"       value={kpis.drivers.value}       delta={kpis.drivers.delta_pct}       icon={<Users size={20} />}     color="#8B5CF6" bg="#F5F3FF" spark={kpis.drivers.spark} />
-        <StatCard label="Total Monthly Loads" value={kpis.monthly_loads.value} delta={kpis.monthly_loads.delta_pct} icon={<Package size={20} />}   color="#10B981" bg="#ECFDF5" spark={kpis.monthly_loads.spark} />
+        <StatCard label="Total Monthly Loads" value={kpis.monthly_loads.value} delta={kpis.monthly_loads.delta_pct} icon={<Package size={20} />}   color="#3B82F6" bg="#EFF6FF" spark={kpis.monthly_loads.spark} />
       </div>
 
       {/* ── Row 2: Companies Growth + Drivers Growth ────────────────── */}
@@ -295,15 +295,15 @@ export default function DashboardPage() {
                 <AreaChart data={seriesCache[companyYear]} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gc" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#178A4C" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#178A4C" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                   <Tooltip content={<AreaTip />} />
-                  <Area type="monotone" dataKey="companies" stroke="#2563EB" strokeWidth={2.5} fill="url(#gc)" dot={false} activeDot={{ r: 5, fill: '#2563EB', strokeWidth: 0 }} />
+                  <Area type="monotone" dataKey="companies" stroke="#178A4C" strokeWidth={2.5} fill="url(#gc)" dot={false} activeDot={{ r: 5, fill: '#178A4C', strokeWidth: 0 }} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -344,15 +344,15 @@ export default function DashboardPage() {
                   <AreaChart data={seriesCache[loadsYear]} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
                     <Tooltip content={<AreaTip />} />
-                    <Area type="monotone" dataKey="loads" stroke="#10B981" strokeWidth={2.5} fill="url(#gl)" dot={false} activeDot={{ r: 5, fill: '#10B981', strokeWidth: 0 }} />
+                    <Area type="monotone" dataKey="loads" stroke="#3B82F6" strokeWidth={2.5} fill="url(#gl)" dot={false} activeDot={{ r: 5, fill: '#3B82F6', strokeWidth: 0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
@@ -421,7 +421,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="company" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
                   <Tooltip content={<BarTip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
-                  <Bar dataKey="curr" fill="#2563EB" radius={[3, 3, 0, 0]} barSize={22} />
+                  <Bar dataKey="curr" fill="#178A4C" radius={[3, 3, 0, 0]} barSize={22} />
                 </BarChart>
               </ResponsiveContainer>
             )}

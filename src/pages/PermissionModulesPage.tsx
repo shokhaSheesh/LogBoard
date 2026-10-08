@@ -184,7 +184,7 @@ function ModuleModal({ mode, initial, onClose, onSave }: {
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               {saving && <Loader2 size={14} className="animate-spin" />}
               {saving ? 'Saving…' : mode === 'create' ? 'Create Module' : 'Save Changes'}
             </button>
@@ -294,7 +294,7 @@ export default function PermissionModulesPage() {
         </div>
         {canCreate && (
         <button onClick={() => setCreateOpen(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}
           onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; }}
           onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}>
           <Plus size={15} /> Create Module
@@ -305,8 +305,8 @@ export default function PermissionModulesPage() {
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
         {[
-          { label: 'Total',    value: modules.length,                                       color: '#2563EB' },
-          { label: 'Platform', value: modules.filter(m => m.scope === 'platform').length,   color: '#2563EB' },
+          { label: 'Total',    value: modules.length,                                       color: '#178A4C' },
+          { label: 'Platform', value: modules.filter(m => m.scope === 'platform').length,   color: '#178A4C' },
           { label: 'Company',  value: modules.filter(m => m.scope === 'company').length,    color: '#7C3AED' },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ backgroundColor: 'var(--card)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>

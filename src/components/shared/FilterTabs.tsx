@@ -24,8 +24,8 @@ export function FilterTabs<T extends string>({ tabs, active, onChange }: FilterT
             onClick={() => onChange(tab.id)}
             className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 transition-all"
             style={{
-              backgroundColor: isActive ? '#2563EB' : 'transparent',
-              border: `1.5px solid ${isActive ? '#2563EB' : 'var(--border)'}`,
+              backgroundColor: isActive ? '#178A4C' : 'transparent',
+              border: `1.5px solid ${isActive ? '#178A4C' : 'var(--border)'}`,
               fontSize: '0.78rem',
               fontWeight: isActive ? 600 : 400,
               color: isActive ? '#ffffff' : 'var(--muted-foreground)',
@@ -34,8 +34,8 @@ export function FilterTabs<T extends string>({ tabs, active, onChange }: FilterT
             onMouseEnter={(e) => {
               if (!isActive) {
                 const el = e.currentTarget as HTMLButtonElement;
-                el.style.borderColor = '#93C5FD';
-                el.style.color = '#2563EB';
+                el.style.borderColor = '#8FD3AE';
+                el.style.color = '#178A4C';
               }
             }}
             onMouseLeave={(e) => {

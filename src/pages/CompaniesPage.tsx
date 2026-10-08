@@ -231,12 +231,12 @@ function CustomSelect({ value, options, onChange }: {
       <button ref={trigRef} type="button" onClick={toggle}
         style={{
           width: '100%', padding: '7px 11px', borderRadius: 8,
-          border: `1px solid ${open ? '#93C5FD' : 'var(--border)'}`,
+          border: `1px solid ${open ? '#8FD3AE' : 'var(--border)'}`,
           fontSize: '0.82rem', color: 'var(--foreground)', backgroundColor: 'var(--card)',
           cursor: 'pointer', display: 'flex', alignItems: 'center',
           justifyContent: 'space-between', gap: 6, outline: 'none',
         }}
-        onMouseEnter={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = '#93C5FD'; }}
+        onMouseEnter={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = '#8FD3AE'; }}
         onMouseLeave={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
       >
         <span>{value}</span>
@@ -256,8 +256,8 @@ function CustomSelect({ value, options, onChange }: {
               style={{
                 width: '100%', padding: '8px 12px', textAlign: 'left', fontSize: '0.82rem',
                 border: 'none', cursor: 'pointer', display: 'block',
-                backgroundColor: o === value ? '#EFF6FF' : 'transparent',
-                color: o === value ? '#2563EB' : 'var(--foreground)',
+                backgroundColor: o === value ? '#ECF7F0' : 'transparent',
+                color: o === value ? '#178A4C' : 'var(--foreground)',
                 fontWeight: o === value ? 600 : 400,
               }}
               onMouseEnter={(e) => { if (o !== value) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
@@ -349,12 +349,12 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
       <button ref={trigRef} type="button" onClick={handleOpen}
         style={{
           width: '100%', padding: '7px 11px', borderRadius: 8,
-          border: `1px solid ${open ? '#93C5FD' : 'var(--border)'}`,
+          border: `1px solid ${open ? '#8FD3AE' : 'var(--border)'}`,
           fontSize: '0.82rem', backgroundColor: 'var(--muted)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
           color: value ? 'var(--foreground)' : 'var(--muted-foreground)', outline: 'none',
         }}
-        onMouseEnter={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = '#93C5FD'; }}
+        onMouseEnter={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = '#8FD3AE'; }}
         onMouseLeave={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
       >
         <span>{value || 'Select date'}</span>
@@ -386,9 +386,9 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
                   style={{
                     aspectRatio: '1', borderRadius: '50%', border: 'none', cursor: d ? 'pointer' : 'default',
                     fontSize: '0.78rem', fontWeight: d === selDay || (d !== null && isToday(d)) ? 600 : 400,
-                    backgroundColor: d === selDay ? '#2563EB' : 'transparent',
-                    color: d === selDay ? '#fff' : (d !== null && isToday(d)) ? '#2563EB' : d ? 'var(--foreground)' : 'transparent',
-                    outline: (d !== null && isToday(d) && d !== selDay) ? '2px solid #2563EB' : 'none',
+                    backgroundColor: d === selDay ? '#178A4C' : 'transparent',
+                    color: d === selDay ? '#fff' : (d !== null && isToday(d)) ? '#178A4C' : d ? 'var(--foreground)' : 'transparent',
+                    outline: (d !== null && isToday(d) && d !== selDay) ? '2px solid #178A4C' : 'none',
                     outlineOffset: -2,
                   }}
                   onMouseEnter={(e) => { if (d && d !== selDay) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
@@ -420,11 +420,11 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
                     style={{
                       padding: '9px 4px', borderRadius: 8, border: 'none', cursor: 'pointer',
                       fontSize: '0.82rem', fontWeight: isSel || isCur ? 600 : 400,
-                      backgroundColor: isSel ? '#2563EB' : isCur ? '#EFF6FF' : 'transparent',
-                      color: isSel ? '#fff' : isCur ? '#2563EB' : 'var(--foreground)',
+                      backgroundColor: isSel ? '#178A4C' : isCur ? '#ECF7F0' : 'transparent',
+                      color: isSel ? '#fff' : isCur ? '#178A4C' : 'var(--foreground)',
                     }}
-                    onMouseEnter={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#DBEAFE' : 'var(--muted)'; }}
-                    onMouseLeave={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#EFF6FF' : 'transparent'; }}
+                    onMouseEnter={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#DDF1E5' : 'var(--muted)'; }}
+                    onMouseLeave={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#ECF7F0' : 'transparent'; }}
                   >{m}</button>
                 );
               })}
@@ -446,11 +446,11 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
                     style={{
                       padding: '9px 4px', borderRadius: 8, border: 'none', cursor: 'pointer',
                       fontSize: '0.82rem', fontWeight: isSel || isCur ? 600 : 400,
-                      backgroundColor: isSel ? '#2563EB' : isCur ? '#EFF6FF' : 'transparent',
-                      color: isSel ? '#fff' : isCur ? '#2563EB' : 'var(--foreground)',
+                      backgroundColor: isSel ? '#178A4C' : isCur ? '#ECF7F0' : 'transparent',
+                      color: isSel ? '#fff' : isCur ? '#178A4C' : 'var(--foreground)',
                     }}
-                    onMouseEnter={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#DBEAFE' : 'var(--muted)'; }}
-                    onMouseLeave={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#EFF6FF' : 'transparent'; }}
+                    onMouseEnter={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#DDF1E5' : 'var(--muted)'; }}
+                    onMouseLeave={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#ECF7F0' : 'transparent'; }}
                   >{y}</button>
                 );
               })}
@@ -511,7 +511,7 @@ function LogoUpload({ initials, logoColor, logo, onChange }: {
       <div>
         <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--foreground)', marginBottom: 3 }}>Company Logo</div>
         <button type="button" onClick={() => fileRef.current?.click()}
-          style={{ fontSize: '0.75rem', color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 }}
+          style={{ fontSize: '0.75rem', color: '#178A4C', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 }}
         >
           {logo ? 'Change logo' : 'Upload logo'}
         </button>
@@ -819,7 +819,7 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
         <form onSubmit={handleSubmit} className="overflow-y-auto px-6 py-5 flex flex-col gap-3">
           <LogoUpload
             initials={form.name.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'}
-            logoColor="#2563EB"
+            logoColor="#178A4C"
             logo={form.logo}
             onChange={(v) => setForm(f => ({ ...f, logo: v }))}
           />
@@ -835,7 +835,7 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
               onClick={() => setUserPickerOpen(o => !o)}
               style={{
                 width: '100%', padding: '7px 11px', borderRadius: 8, textAlign: 'left',
-                border: `1px solid ${errors.ownerId ? '#EF4444' : userPickerOpen ? '#93C5FD' : 'var(--border)'}`,
+                border: `1px solid ${errors.ownerId ? '#EF4444' : userPickerOpen ? '#8FD3AE' : 'var(--border)'}`,
                 fontSize: '0.82rem', backgroundColor: 'var(--muted)', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, outline: 'none',
               }}>
@@ -872,7 +872,7 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
                       style={{
                         width: '100%', padding: '9px 12px', textAlign: 'left', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 10,
-                        backgroundColor: u.id === form.ownerId ? '#EFF6FF' : 'transparent',
+                        backgroundColor: u.id === form.ownerId ? '#ECF7F0' : 'transparent',
                       }}
                       onMouseEnter={e => { if (u.id !== form.ownerId) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
                       onMouseLeave={e => { if (u.id !== form.ownerId) e.currentTarget.style.backgroundColor = 'transparent'; }}>
@@ -880,7 +880,7 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
                         {u.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: u.id === form.ownerId ? '#2563EB' : 'var(--foreground)', lineHeight: 1.2 }}>{u.full_name}</div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: u.id === form.ownerId ? '#178A4C' : 'var(--foreground)', lineHeight: 1.2 }}>{u.full_name}</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.login || u.email}</div>
                       </div>
                     </button>
@@ -940,7 +940,7 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
             </button>
             <button type="submit" disabled={saving}
               className="flex-1 py-2 rounded-lg flex items-center justify-center gap-2"
-              style={{ fontSize: '0.83rem', fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.8 : 1 }}
+              style={{ fontSize: '0.83rem', fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.8 : 1 }}
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
               {mode === 'create' ? 'Add Company' : 'Save Changes'}
@@ -1116,7 +1116,7 @@ export default function CompaniesPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-4 mb-5">
         {[
-          { label: 'Total',     value: allCounts.total,     icon: <Building2 size={19} />,    iconBg: '#2563EB' },
+          { label: 'Total',     value: allCounts.total,     icon: <Building2 size={19} />,    iconBg: '#178A4C' },
           { label: 'Active',    value: allCounts.active,    icon: <CheckCircle2 size={19} />, iconBg: '#10B981' },
           { label: 'Suspended', value: allCounts.suspended, icon: <XCircle size={19} />,      iconBg: '#EF4444' },
         ].map(({ label, value, icon, iconBg }) => (
@@ -1148,7 +1148,7 @@ export default function CompaniesPage() {
           {canCreate && (
           <button
             onClick={() => setCreateOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg,#2563EB 0%,#1D4ED8 100%)', border: 'none', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg,#178A4C 0%,#136F3D 100%)', border: 'none', cursor: 'pointer' }}
           >
             <Plus size={15} /> New Company
           </button>
@@ -1323,7 +1323,7 @@ export default function CompaniesPage() {
                 if (p === -1) return <span key="ellipsis" style={{ padding: '0 4px', color: 'var(--muted-foreground)', fontSize: '0.78rem' }}>…</span>;
                 return (
                   <button key={p} onClick={() => goPage(p)}
-                    style={{ width: 30, height: 30, borderRadius: 7, fontSize: '0.78rem', fontWeight: p === page ? 600 : 400, cursor: 'pointer', backgroundColor: p === page ? '#2563EB' : 'transparent', color: p === page ? '#fff' : 'var(--muted-foreground)', border: 'none' }}
+                    style={{ width: 30, height: 30, borderRadius: 7, fontSize: '0.78rem', fontWeight: p === page ? 600 : 400, cursor: 'pointer', backgroundColor: p === page ? '#178A4C' : 'transparent', color: p === page ? '#fff' : 'var(--muted-foreground)', border: 'none' }}
                     onMouseEnter={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
                     onMouseLeave={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
                   >

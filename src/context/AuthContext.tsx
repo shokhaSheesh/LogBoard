@@ -73,7 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     api.get<AuthUser>('/auth/me')
       .then(setUser)
-      .catch(() => clearToken())
+      // Only an actual 401 means the token is dead. Offline or a 5xx must not sign
+      // the user out — a reload recovers.
+      .catch((e) => { if (e instanceof ApiException && e.status === 401) clearToken(); })
       .finally(() => setIsLoading(false));
   }, []);
 

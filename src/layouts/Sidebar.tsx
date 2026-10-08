@@ -57,8 +57,8 @@ function NavItem({ item, collapsed }: { item: NavItemDef; collapsed: boolean }) 
               collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'
             }`}
             style={{
-              backgroundColor: isActive ? '#2563EB' : hovered ? 'var(--sidebar-accent)' : 'transparent',
-              color: isActive ? '#ffffff' : 'var(--sidebar-foreground)',
+              backgroundColor: isActive ? 'var(--sidebar-primary)' : hovered ? 'var(--sidebar-accent)' : 'transparent',
+              color: isActive ? 'var(--sidebar-primary-foreground)' : 'var(--sidebar-foreground)',
             }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
@@ -74,8 +74,8 @@ function NavItem({ item, collapsed }: { item: NavItemDef; collapsed: boolean }) 
                   <span
                     className="flex items-center justify-center rounded-full min-w-[20px] h-5 px-1.5"
                     style={{
-                      backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : 'rgba(59,130,246,0.25)',
-                      color: isActive ? '#ffffff' : '#93C5FD',
+                      backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : 'rgba(23,138,76,0.14)',
+                      color: isActive ? '#ffffff' : '#136F3D',
                       fontSize: '0.65rem',
                       fontWeight: 600,
                     }}
@@ -90,7 +90,7 @@ function NavItem({ item, collapsed }: { item: NavItemDef; collapsed: boolean }) 
             {collapsed && item.badge && (
               <span
                 className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: '#3B82F6' }}
+                style={{ backgroundColor: 'var(--sidebar-primary)' }}
               />
             )}
           </div>
@@ -144,7 +144,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {!collapsed && (
           <div className="ml-3">
-            <div style={{ color: '#F1F5F9', fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
+            <div style={{ color: 'var(--sidebar-accent-foreground)', fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
               FleetAdmin
             </div>
             <div style={{ color: 'var(--sidebar-foreground)', fontSize: '0.7rem', opacity: 0.6 }}>
@@ -189,7 +189,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center"
               title={displayName}
-              style={{ background: 'linear-gradient(135deg, #3B82F6, #6366F1)', cursor: 'default' }}
+              style={{ background: 'linear-gradient(135deg, #1E9E59, #136F3D)', cursor: 'default' }}
             >
               <span style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 700 }}>{initials}</span>
             </div>
@@ -201,14 +201,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           >
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: 'linear-gradient(135deg, #3B82F6, #6366F1)' }}
+              style={{ background: 'linear-gradient(135deg, #1E9E59, #136F3D)' }}
             >
               <span style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 700 }}>{initials}</span>
             </div>
             <div className="flex-1 min-w-0">
               <div
                 style={{
-                  color: '#F1F5F9',
+                  color: 'var(--sidebar-accent-foreground)',
                   fontSize: '0.8rem',
                   fontWeight: 600,
                   lineHeight: 1.2,

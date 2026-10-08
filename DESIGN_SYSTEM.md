@@ -8,7 +8,7 @@ Reference document for matching design, style, and colors across projects.
 
 | Token | Value |
 |---|---|
-| Font family | `Inter` (Google Fonts), fallback: `system-ui, sans-serif` |
+| Font family | `Plus Jakarta Sans` (Google Fonts), fallback: `system-ui, sans-serif` |
 | Base size | `16px` |
 | Weight normal | `400` |
 | Weight medium | `500` |
@@ -17,7 +17,7 @@ Reference document for matching design, style, and colors across projects.
 
 Font import:
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 ```
 
 Typical font sizes in use:
@@ -39,32 +39,32 @@ Typical font sizes in use:
 | `--foreground` | `#111827` | Primary text |
 | `--card` | `#ffffff` | Card / panel background |
 | `--card-foreground` | `#111827` | Text on cards |
-| `--primary` | `#2563EB` | Brand blue — buttons, active states, links |
+| `--primary` | `#178A4C` | Brand green (Pine) — buttons, active states, links |
 | `--primary-foreground` | `#ffffff` | Text on primary |
-| `--secondary` | `#EFF6FF` | Light blue tint — secondary buttons |
-| `--secondary-foreground` | `#1D4ED8` | Text on secondary |
+| `--secondary` | `#ECF7F0` | Light green tint — secondary buttons |
+| `--secondary-foreground` | `#136F3D` | Text on secondary |
 | `--muted` | `#F3F4F6` | Subtle backgrounds — inputs, toolbars |
 | `--muted-foreground` | `#6B7280` | Placeholder / secondary text |
-| `--accent` | `#DBEAFE` | Hover tint on ghost elements |
-| `--accent-foreground` | `#1D4ED8` | Text on accent |
+| `--accent` | `#DDF1E5` | Hover tint on ghost elements |
+| `--accent-foreground` | `#136F3D` | Text on accent |
 | `--destructive` | `#DC2626` | Danger / delete actions |
 | `--destructive-foreground` | `#ffffff` | Text on destructive |
 | `--border` | `#E5E7EB` | Default borders and dividers |
 | `--input-background` | `#F9FAFB` | Input field fill |
-| `--ring` | `#93C5FD` | Focus ring color |
+| `--ring` | `#8FD3AE` | Focus ring color |
 
 ### Sidebar Tokens
 
 | Token | Hex | Usage |
 |---|---|---|
-| `--sidebar` | `#0F172A` | Sidebar background (dark navy) |
-| `--sidebar-foreground` | `#CBD5E1` | Default nav text |
-| `--sidebar-primary` | `#2563EB` | Active nav item background |
+| `--sidebar` | `#ffffff` | Sidebar background (white) |
+| `--sidebar-foreground` | `#4B5563` | Default nav text |
+| `--sidebar-primary` | `#178A4C` | Active nav item background |
 | `--sidebar-primary-foreground` | `#ffffff` | Active nav item text |
-| `--sidebar-accent` | `#1E293B` | Hover / user card background |
-| `--sidebar-accent-foreground` | `#F1F5F9` | Text in accent areas |
-| `--sidebar-border` | `rgba(255,255,255,0.06)` | Subtle sidebar dividers |
-| `--sidebar-ring` | `#3B82F6` | Sidebar focus ring |
+| `--sidebar-accent` | `#F3F4F6` | Hover / user card background |
+| `--sidebar-accent-foreground` | `#111827` | Text in accent areas |
+| `--sidebar-border` | `#E5E7EB` | Sidebar dividers |
+| `--sidebar-ring` | `#178A4C` | Sidebar focus ring |
 
 ### Border Radius
 
@@ -104,9 +104,9 @@ Badge pattern: small colored dot + text, no background pill on status.
 
 | Series | Hex |
 |---|---|
-| Companies / Brand blue | `#2563EB` |
+| Companies / Brand green | `#178A4C` |
 | Drivers | `#8B5CF6` (violet) |
-| Loads | `#10B981` (emerald) |
+| Loads | `#3B82F6` (blue) |
 | Subscription: Enterprise | `#2563EB` |
 | Subscription: Professional | `#8B5CF6` |
 | Subscription: Starter | `#10B981` |
@@ -116,7 +116,7 @@ Badge pattern: small colored dot + text, no background pill on status.
 
 User avatars use a diagonal gradient:
 ```css
-background: linear-gradient(135deg, #3B82F6, #6366F1);
+background: linear-gradient(135deg, #1E9E59, #136F3D);
 ```
 
 ---
@@ -143,7 +143,7 @@ background: linear-gradient(135deg, #3B82F6, #6366F1);
 - Header section: logo mark + app name, `border-b` with `var(--sidebar-border)`
 - Logo mark: `36×36px`, `rounded-xl`, `background: var(--sidebar-primary)` with white icon
 - Nav section label: `0.65rem`, uppercase, `letter-spacing: 0.08em`, `opacity: 0.45`
-- Nav items: `rounded-lg`, `px-3 py-2.5`, active = `#2563EB` bg + white text, hover = `var(--sidebar-accent)`
+- Nav items: `rounded-lg`, `px-3 py-2.5`, active = `var(--sidebar-primary)` bg + white text, hover = `var(--sidebar-accent)`
 - Active nav item has a `ChevronRight` icon at the end at `opacity: 0.6`
 - User profile card at bottom: `rounded-xl`, `p-3`, `bg: var(--sidebar-accent)`
 
@@ -190,10 +190,10 @@ Built with `cva`. Base classes include `rounded-md text-sm font-medium transitio
 ### FilterTabs (pill-style)
 
 - Inactive: transparent bg, `1.5px solid var(--border)`, text `var(--muted-foreground)`
-- Active: `bg: #2563EB`, `border: #2563EB`, text white, `font-weight: 600`
+- Active: `bg: #178A4C`, `border: #178A4C`, text white, `font-weight: 600`
 - Shape: `rounded-full`, `px-3.5 py-1.5`
 - Count badge inside: `rounded-full px-1.5 py-0.5`, active = `rgba(255,255,255,0.22)` / inactive = `var(--muted)`
-- Hover (inactive): border turns `#93C5FD`, text turns `#2563EB`
+- Hover (inactive): border turns `#8FD3AE`, text turns `#178A4C`
 
 ### Cards / Panels
 
@@ -206,7 +206,7 @@ Built with `cva`. Base classes include `rounded-md text-sm font-medium transitio
 ### Stat / KPI Cards
 
 - White card, `rounded-xl`, `border: 1px solid var(--border)`
-- Icon wrapper: `rounded-xl`, `w-10 h-10`, brand-colored background (e.g. `#EFF6FF` with blue icon)
+- Icon wrapper: `rounded-xl`, `w-10 h-10`, brand-colored background (e.g. `#ECF7F0` with green icon)
 - Sparkline chart: `88×36px` inline LineChart, no dots, `strokeWidth: 2`
 - Large number: `text-2xl font-bold #111827`
 - Sub-label: `0.75rem`, `var(--muted-foreground)`

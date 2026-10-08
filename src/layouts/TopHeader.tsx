@@ -84,7 +84,7 @@ export function TopHeader({ onToggleSidebar }: TopHeaderProps) {
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer"
           title={displayName}
-          style={{ background: 'linear-gradient(135deg, #3B82F6, #6366F1)' }}
+          style={{ background: 'linear-gradient(135deg, #1E9E59, #136F3D)' }}
         >
           <span style={{ color: '#ffffff', fontSize: '0.75rem', fontWeight: 700 }}>{getInitials(displayName)}</span>
         </div>
