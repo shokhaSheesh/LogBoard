@@ -1,103 +1,37 @@
-import { useState } from 'react';
 import { NavLink } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import { SCREEN_READ } from '@/lib/permissions';
-import {
-  LayoutDashboard,
-  Building2,
-  CreditCard,
-  Users,
-  ShieldCheck,
-  Lock,
-  Layers,
-  Bell,
-  ChevronRight,
-  Zap,
-} from 'lucide-react';
+import { BRAND_NAME, BrandMark } from '@/components/shared/Brand';
+import { ChartPie, Building2, CreditCard, Bell, Users, ShieldCheck, KeyRound, Blocks } from 'lucide-react';
 
-interface NavItemDef {
-  path: string;
-  label: string;
-  icon: React.ReactNode;
-  badge?: number;
-}
+interface NavItemDef { path: string; label: string; icon: React.ElementType }
+interface NavSection { title: string; items: NavItemDef[] }
 
-const NAV_ITEMS: NavItemDef[] = [
-  { path: '/admin/dashboard',         label: 'Dashboard',           icon: <LayoutDashboard size={18} /> },
-  { path: '/admin/companies',         label: 'Companies',           icon: <Building2 size={18} /> },
-  { path: '/admin/subscriptions',     label: 'Subscriptions',       icon: <CreditCard size={18} /> },
-  { path: '/admin/notifications',     label: 'Notifications',       icon: <Bell size={18} /> },
-  { path: '/admin/board-users',       label: 'Board Users',         icon: <Users size={18} /> },
-  { path: '/admin/admin-users',       label: 'Admin Users',         icon: <ShieldCheck size={18} /> },
-  { path: '/admin/roles-permissions', label: 'Roles & Permissions', icon: <Lock size={18} /> },
-  { path: '/admin/permission-modules', label: 'Perm. Modules',      icon: <Layers size={18} /> },
+// Grouped the same way the Brelo app groups its sidebar: the overview alone at the top,
+// then the platform's customers, the people, and who is allowed to do what.
+const NAV_SECTIONS: NavSection[] = [
+  { title: 'Overview', items: [
+    { path: '/admin/dashboard',          label: 'Dashboard',           icon: ChartPie },
+  ] },
+  { title: 'Platform', items: [
+    { path: '/admin/companies',          label: 'Companies',           icon: Building2 },
+    { path: '/admin/subscriptions',      label: 'Subscriptions',       icon: CreditCard },
+    { path: '/admin/notifications',      label: 'Notifications',       icon: Bell },
+  ] },
+  { title: 'Users', items: [
+    { path: '/admin/board-users',        label: 'Board Users',         icon: Users },
+    { path: '/admin/admin-users',        label: 'Admin Users',         icon: ShieldCheck },
+  ] },
+  { title: 'Access', items: [
+    { path: '/admin/roles-permissions',  label: 'Roles & Permissions', icon: KeyRound },
+    { path: '/admin/permission-modules', label: 'Permission Modules',  icon: Blocks },
+  ] },
 ];
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
   return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
-}
-
-function NavItem({ item, collapsed }: { item: NavItemDef; collapsed: boolean }) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <li>
-      <NavLink
-        to={item.path}
-        title={collapsed ? item.label : undefined}
-        className="block"
-        style={{ textDecoration: 'none' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {({ isActive }) => (
-          <div
-            className={`w-full flex items-center rounded-lg transition-all duration-150 cursor-pointer ${
-              collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'
-            }`}
-            style={{
-              backgroundColor: isActive ? 'var(--sidebar-primary)' : hovered ? 'var(--sidebar-accent)' : 'transparent',
-              color: isActive ? 'var(--sidebar-primary-foreground)' : 'var(--sidebar-foreground)',
-            }}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-          >
-            <span style={{ opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
-
-            {!collapsed && (
-              <>
-                <span style={{ fontSize: '0.85rem', fontWeight: isActive ? 600 : 400, flex: 1 }}>
-                  {item.label}
-                </span>
-                {item.badge && (
-                  <span
-                    className="flex items-center justify-center rounded-full min-w-[20px] h-5 px-1.5"
-                    style={{
-                      backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : 'rgba(23,138,76,0.14)',
-                      color: isActive ? '#ffffff' : '#136F3D',
-                      fontSize: '0.65rem',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-                {isActive && <ChevronRight size={14} style={{ opacity: 0.6 }} />}
-              </>
-            )}
-
-            {collapsed && item.badge && (
-              <span
-                className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: 'var(--sidebar-primary)' }}
-              />
-            )}
-          </div>
-        )}
-      </NavLink>
-    </li>
-  );
 }
 
 interface SidebarProps {
@@ -108,132 +42,95 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { user, can, permsLoaded } = useAuth();
   const displayName  = user?.full_name || user?.email || 'Account';
-  const displayEmail = user?.email || user?.full_name || '';
-  const initials     = getInitials(displayName);
+  const displayEmail = user?.email || '';
   // Until permissions resolve, show everything (avoids a flash of an empty menu);
-  // once loaded, hide any screen the role can't read.
-  const visibleItems = permsLoaded
-    ? NAV_ITEMS.filter((item) => { const key = SCREEN_READ[item.path]; return !key || can(key); })
-    : NAV_ITEMS;
+  // once loaded, hide any screen the role can't read, and any section left empty.
+  const sections = NAV_SECTIONS
+    .map((sec) => ({ ...sec, items: permsLoaded ? sec.items.filter((i) => { const key = SCREEN_READ[i.path]; return !key || can(key); }) : sec.items }))
+    .filter((sec) => sec.items.length > 0);
 
   return (
     <aside
-      className={`relative flex flex-col h-full shrink-0 select-none overflow-hidden transition-[width] duration-300 ease-in-out ${
-        collapsed ? 'w-16 cursor-pointer' : 'w-64 cursor-default'
-      }`}
+      className="h-full flex flex-col overflow-hidden shrink-0 select-none"
       style={{
         backgroundColor: 'var(--sidebar)',
         borderRight: '1px solid var(--sidebar-border)',
+        width: collapsed ? 64 : 220,
+        minWidth: collapsed ? 64 : 220,
+        transition: 'width 300ms ease-in-out, min-width 300ms ease-in-out',
+        cursor: collapsed ? 'pointer' : 'default',
       }}
+      aria-label="Main navigation"
       onClick={() => { if (collapsed) onToggle(); }}
     >
-      {/* ── Header: logo ────────────────────────────────────────────── */}
-      <div
-        className={`flex items-center border-b shrink-0 px-4 py-4 ${
-          collapsed ? 'justify-center' : ''
-        }`}
-        style={{ borderColor: 'var(--sidebar-border)' }}
+      {/* Brand */}
+      <NavLink
+        to="/admin/dashboard"
         onClick={(e) => e.stopPropagation()}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '14px 0' : '14px 16px', justifyContent: collapsed ? 'center' : 'flex-start', borderBottom: '1px solid var(--sidebar-border)', textDecoration: 'none' }}
       >
-        <div
-          className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0"
-          style={{ backgroundColor: 'var(--sidebar-primary)' }}
-        >
-          <Zap size={18} color="#fff" />
-        </div>
-
+        <BrandMark />
         {!collapsed && (
-          <div className="ml-3">
-            <div style={{ color: 'var(--sidebar-accent-foreground)', fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
-              FleetAdmin
-            </div>
-            <div style={{ color: 'var(--sidebar-foreground)', fontSize: '0.7rem', opacity: 0.6 }}>
-              Super Admin
-            </div>
-          </div>
+          <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--sidebar-accent-foreground)', letterSpacing: '-0.01em' }}>{BRAND_NAME}</span>
+            <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--primary)' }}>Admin</span>
+          </span>
         )}
-      </div>
+      </NavLink>
 
-      {/* ── Navigation ──────────────────────────────────────────────── */}
-      <nav className={`flex-1 py-4 overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}>
-        {!collapsed && (
-          <div
-            style={{
-              color: 'var(--sidebar-foreground)',
-              fontSize: '0.65rem',
-              fontWeight: 600,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              opacity: 0.45,
-              padding: '0 8px 8px',
-            }}
-          >
-            Main Menu
+      {/* Navigation */}
+      <nav className="flex-1 px-2 py-2 flex flex-col overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {sections.map((section, si) => (
+          <div key={section.title} className="flex flex-col gap-0.5" style={{ marginTop: si === 0 ? 0 : 14 }}>
+            {!collapsed ? (
+              <div className="px-2 pt-1 pb-1" style={{ fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--sidebar-foreground)', opacity: 0.45 }}>
+                {section.title}
+              </div>
+            ) : si > 0 ? (
+              <div style={{ height: 1, backgroundColor: 'var(--sidebar-border)', margin: '6px 12px 8px' }} />
+            ) : null}
+            {section.items.map(({ icon: Icon, label, path }) => (
+              <NavLink key={path} to={path} title={collapsed ? label : undefined} style={{ textDecoration: 'none' }}>
+                {({ isActive }) => (
+                  <span
+                    className="flex items-center gap-3 rounded-lg w-full transition-all duration-150"
+                    style={{
+                      padding: collapsed ? '10px 0' : '9px 12px',
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      fontSize: 13,
+                      fontWeight: isActive ? 600 : 400,
+                      color: isActive ? 'var(--sidebar-primary-foreground)' : 'var(--sidebar-foreground)',
+                      backgroundColor: isActive ? 'var(--sidebar-primary)' : 'transparent',
+                    }}
+                    onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'var(--sidebar-accent)'; e.currentTarget.style.color = 'var(--sidebar-accent-foreground)'; } }}
+                    onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-foreground)'; } }}
+                  >
+                    <Icon size={16} strokeWidth={isActive ? 2.5 : 2} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />
+                    {!collapsed && <span className="flex-1" style={{ whiteSpace: 'nowrap' }}>{label}</span>}
+                  </span>
+                )}
+              </NavLink>
+            ))}
           </div>
-        )}
-
-        <ul className="space-y-0.5">
-          {visibleItems.map((item) => (
-            <NavItem key={item.path} item={item} collapsed={collapsed} />
-          ))}
-        </ul>
+        ))}
       </nav>
 
-      {/* ── User Profile ────────────────────────────────────────────── */}
+      {/* Who is signed in */}
       <div
-        className={`pb-4 shrink-0 ${collapsed ? 'px-2' : 'px-3'}`}
+        className="mx-2 mb-3"
         onClick={(e) => e.stopPropagation()}
+        title={collapsed ? displayName : undefined}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, backgroundColor: 'var(--sidebar-accent)', borderRadius: 12, padding: collapsed ? '10px 0' : 12, justifyContent: collapsed ? 'center' : 'flex-start' }}
       >
-        {collapsed ? (
-          <div className="flex justify-center">
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center"
-              title={displayName}
-              style={{ background: 'linear-gradient(135deg, #1E9E59, #136F3D)', cursor: 'default' }}
-            >
-              <span style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 700 }}>{initials}</span>
-            </div>
-          </div>
-        ) : (
-          <div
-            className="rounded-xl p-3 flex items-center gap-3"
-            style={{ backgroundColor: 'var(--sidebar-accent)' }}
-          >
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: 'linear-gradient(135deg, #1E9E59, #136F3D)' }}
-            >
-              <span style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 700 }}>{initials}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div
-                style={{
-                  color: 'var(--sidebar-accent-foreground)',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  lineHeight: 1.2,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {displayName}
-              </div>
-              <div
-                style={{
-                  color: 'var(--sidebar-foreground)',
-                  fontSize: '0.7rem',
-                  opacity: 0.6,
-                  lineHeight: 1.3,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {displayEmail}
-              </div>
-            </div>
-            <ChevronRight size={14} className="shrink-0" style={{ color: 'var(--sidebar-foreground)', opacity: 0.5 }} />
+        <div style={{ width: 34, height: 34, borderRadius: '50%', backgroundColor: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#fff', flexShrink: 0 }}>
+          {getInitials(displayName)}
+        </div>
+        {!collapsed && (
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--sidebar-accent-foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
+            {displayEmail && displayEmail !== displayName && (
+              <div style={{ fontSize: 11, color: 'var(--sidebar-foreground)', opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayEmail}</div>
+            )}
           </div>
         )}
       </div>

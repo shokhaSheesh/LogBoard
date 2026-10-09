@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Loader2, KeyRound, Check, Zap } from 'lucide-react';
+import { Eye, EyeOff, Loader2, KeyRound, Check } from 'lucide-react';
+import { BRAND_NAME, BrandMark } from '@/components/shared/Brand';
 import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 
@@ -67,10 +68,8 @@ export default function ChangePasswordPage() {
 
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Zap size={17} color="#fff" />
-          </div>
-          <span style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: '0.95rem' }}>FleetAdmin</span>
+          <BrandMark />
+          <span style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: '0.95rem' }}>{BRAND_NAME}</span>
         </div>
 
         {done ? (

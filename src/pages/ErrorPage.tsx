@@ -52,7 +52,7 @@ export default function ErrorPage() {
           </button>
           <Link
             to="/admin/dashboard"
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', backgroundColor: 'var(--primary)', border: 'none', color: '#fff', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }}
           >
             <Home size={15} /> Dashboard
           </Link>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Eye, EyeOff, Loader2, Zap } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { BRAND_NAME, BrandMark } from '@/components/shared/Brand';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -71,12 +72,10 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0" style={{ backgroundColor: 'var(--primary)' }}>
-            <Zap size={18} color="#fff" />
-          </div>
+          <BrandMark />
           <div>
-            <div style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.2 }}>FleetAdmin</div>
-            <div style={{ color: 'var(--muted-foreground)', fontSize: '0.7rem' }}>Super Admin</div>
+            <div style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.2 }}>{BRAND_NAME}</div>
+            <div style={{ color: 'var(--muted-foreground)', fontSize: '0.7rem' }}>Admin console</div>
           </div>
         </div>
 
@@ -198,7 +197,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p style={{ color: 'var(--muted-foreground)', fontSize: '0.75rem' }}>
-          © 2026 FleetAdmin
+          © 2026 {BRAND_NAME}
         </p>
       </div>
 

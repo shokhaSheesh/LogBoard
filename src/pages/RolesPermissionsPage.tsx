@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Shield, Save, Trash2, X, Loader2 } from 'lucide-react';
+import { Dash, Page } from '@/components/shared/ui';
+import { useEscape } from '@/lib/useEscape';
 import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
@@ -73,14 +75,9 @@ function AddRoleModal({
   const [name, setName]           = useState('');
   const [desc, setDesc]           = useState('');
   const [saving, setSaving]       = useState(false);
+  useEscape(onClose, !saving);
   const [serverError, setServerError] = useState('');
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%', height: 38, padding: '0 11px', borderRadius: 8,
-    border: '1px solid var(--border)', backgroundColor: 'var(--background)',
-    color: 'var(--foreground)', fontSize: '0.83rem', outline: 'none',
-    boxSizing: 'border-box',
-  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -143,7 +140,7 @@ function AddRoleModal({
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Manager"
-              style={inputStyle}
+              className="field"
               autoFocus
               required
               disabled={saving}
@@ -157,7 +154,7 @@ function AddRoleModal({
               value={desc}
               onChange={e => setDesc(e.target.value)}
               placeholder="Short description of this role"
-              style={inputStyle}
+              className="field"
               disabled={saving}
             />
           </div>
@@ -189,7 +186,7 @@ function AddRoleModal({
               disabled={saving}
               style={{
                 flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer',
-                background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)',
+                background: saving ? 'var(--muted)' : 'var(--primary)',
                 border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff',
                 fontSize: '0.83rem', fontWeight: 600,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -389,17 +386,7 @@ export default function RolesPermissionsPage() {
   const COL_W = 88;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
-
-      {/* ── Header ────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ color: 'var(--foreground)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>
-          Roles & Permissions
-        </h1>
-        <p style={{ color: 'var(--muted-foreground)', fontSize: '0.83rem', marginTop: 3 }}>
-          Access control management for internal staff and tenant admins
-        </p>
-      </div>
+    <Page>
 
       {/* ── Loading / Error states ────────────────────────────────────── */}
       {isLoading && (
@@ -422,10 +409,10 @@ export default function RolesPermissionsPage() {
       )}
 
       {!isLoading && !loadError && selected && (
-        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '240px minmax(0, 1fr)', gap: 12, alignItems: 'start' }}>
 
           {/* ── Left: Roles List ──────────────────────────────────────── */}
-          <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--foreground)' }}>Roles</span>
             </div>
@@ -503,14 +490,14 @@ export default function RolesPermissionsPage() {
           </div>
 
           {/* ── Right: Matrix ─────────────────────────────────────────── */}
-          <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
             {/* Role header */}
-            <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                   <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--foreground)' }}>
-                    Editing: {selected.name} Role
+                    {selected.name}
                   </span>
                   {dirty && (
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.04em', backgroundColor: '#FEF9C3', color: '#854D0E', border: '1px solid #FDE68A', padding: '2px 7px', borderRadius: 99 }}>
@@ -518,9 +505,9 @@ export default function RolesPermissionsPage() {
                     </span>
                   )}
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', margin: 0 }}>
-                  {selected.description || 'No description.'}
-                </p>
+                {selected.description && (
+                  <p style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', margin: 0 }}>{selected.description}</p>
+                )}
               </div>
 
               {/* Global select all */}
@@ -542,45 +529,40 @@ export default function RolesPermissionsPage() {
 
             {/* Matrix table */}
             <div style={{ overflowX: 'auto', flex: 1 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table className="tbl">
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    <th style={{ padding: '10px 22px', textAlign: 'left', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
+                    <th style={{ padding: '10px 18px' }}>
                       Module
                     </th>
                     {allActions.map(a => (
-                      <th key={a} style={{ width: COL_W, padding: '10px 0', textAlign: 'center', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
+                      <th key={a} style={{ width: COL_W, padding: '10px 0', textAlign: 'center'}}>
                         {a.charAt(0).toUpperCase() + a.slice(1)}
                       </th>
                     ))}
                     {/* Row select-all column — only when editable */}
                     {editable && (
-                      <th style={{ width: 80, padding: '10px 16px 10px 0', textAlign: 'center', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
+                      <th style={{ width: 80, padding: '10px 16px 10px 0', textAlign: 'center'}}>
                         All
                       </th>
                     )}
                   </tr>
                 </thead>
                 <tbody>
-                  {modules.map((mod, ci) => {
+                  {modules.map((mod) => {
                     const rowKeys  = mod.actions.map(a => `${mod.key}.${a}`);
                     const rowAllOn = rowKeys.every(k => selected.permissions.has(k));
 
                     return (
-                      <tr
-                        key={mod.id}
-                        style={{ borderBottom: ci < modules.length - 1 ? '1px solid var(--border)' : 'none' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                      >
-                        <td style={{ padding: '16px 22px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)' }}>
+                      <tr key={mod.id}>
+                        <td style={{ padding: '10px 18px', fontSize: 13, fontWeight: 600, color: 'var(--foreground)' }}>
                           {mod.label}
                         </td>
                         {allActions.map(action => {
                           const key = `${mod.key}.${action}`;
                           const hasAction = mod.actions.includes(action);
                           return (
-                            <td key={action} style={{ width: COL_W, textAlign: 'center', padding: '16px 0' }}>
+                            <td key={action} style={{ width: COL_W, textAlign: 'center', padding: '10px 0' }}>
                               {hasAction ? (
                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                                   <Toggle
@@ -589,13 +571,13 @@ export default function RolesPermissionsPage() {
                                   />
                                 </div>
                               ) : (
-                                <span style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>—</span>
+                                <Dash />
                               )}
                             </td>
                           );
                         })}
                         {editable && (
-                          <td style={{ width: 80, textAlign: 'center', padding: '16px 16px 16px 0' }}>
+                          <td style={{ width: 80, textAlign: 'center', padding: '10px 16px 10px 0' }}>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
                               <Toggle checked={rowAllOn} onChange={() => toggleRow(mod)} />
                             </div>
@@ -609,7 +591,7 @@ export default function RolesPermissionsPage() {
             </div>
 
             {/* Footer */}
-            <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, backgroundColor: 'var(--card)', position: 'sticky', bottom: 0 }}>
+            <div style={{ padding: '10px 18px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, backgroundColor: 'var(--card)', position: 'sticky', bottom: 0 }}>
               {saveError && (
                 <span style={{ fontSize: '0.78rem', color: '#DC2626', marginRight: 'auto' }}>{saveError}</span>
               )}
@@ -635,7 +617,7 @@ export default function RolesPermissionsPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6,
                       padding: '8px 18px', borderRadius: 8, cursor: dirty && !saving ? 'pointer' : 'default',
-                      background: dirty && !saving ? 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)' : 'var(--muted)',
+                      backgroundColor: dirty && !saving ? 'var(--primary)' : 'var(--muted)',
                       border: 'none', color: dirty && !saving ? '#fff' : 'var(--muted-foreground)',
                       fontSize: '0.82rem', fontWeight: 600, transition: 'background 0.2s',
                     }}
@@ -677,6 +659,6 @@ export default function RolesPermissionsPage() {
           error={deleteError ?? undefined}
         />
       )}
-    </div>
+    </Page>
   );
 }

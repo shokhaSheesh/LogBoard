@@ -1,71 +1,14 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Search, Plus, Pencil, Trash2, X, ShieldCheck, Eye, EyeOff, ChevronDown, Loader2, Copy, Check } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Pencil, Trash2, X, ShieldCheck, ShieldOff, ShieldEllipsis, Eye, EyeOff, Loader2, Copy, Check } from 'lucide-react';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
+import { Kpi } from '@/components/shared/Kpi';
+import { Card, Dash, IconButton, KpiRow, Page, Pager, PrimaryButton, RowActions, SearchBox, TableState, Toolbar } from '@/components/shared/ui';
+import { useEscape } from '@/lib/useEscape';
+import { SearchSelect } from '@/components/shared/SearchSelect';
+import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
 import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
-
-// ── CustomSelect ──────────────────────────────────────────────────────────────
-
-function CustomSelect({ value, options, onChange }: {
-  value: string;
-  options: { id: string; name: string }[];
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen]   = useState(false);
-  const containerRef      = useRef<HTMLDivElement>(null);
-  const display           = options.find(o => o.id === value)?.name ?? value;
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [open]);
-
-  return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
-      <button type="button" onClick={() => setOpen(o => !o)}
-        style={{
-          width: '100%', height: 38, padding: '0 11px', borderRadius: 8,
-          border: `1px solid ${open ? '#8FD3AE' : 'var(--border)'}`,
-          fontSize: '0.83rem', color: 'var(--foreground)', backgroundColor: 'var(--background)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: 6, outline: 'none', boxSizing: 'border-box',
-        }}
-        onMouseEnter={e => { if (!open) e.currentTarget.style.borderColor = '#8FD3AE'; }}
-        onMouseLeave={e => { if (!open) e.currentTarget.style.borderColor = 'var(--border)'; }}
-      >
-        <span>{display}</span>
-        <ChevronDown size={13} style={{ flexShrink: 0, opacity: 0.5, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
-      </button>
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 100,
-          backgroundColor: 'var(--card)', border: '1px solid var(--border)',
-          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
-          overflow: 'hidden', maxHeight: 220, overflowY: 'auto',
-        }}>
-          {options.map(o => (
-            <button key={o.id} type="button" onClick={() => { onChange(o.id); setOpen(false); }}
-              style={{
-                width: '100%', padding: '8px 12px', textAlign: 'left', fontSize: '0.82rem',
-                border: 'none', cursor: 'pointer', display: 'block',
-                backgroundColor: o.id === value ? '#ECF7F0' : 'transparent',
-                color: o.id === value ? '#178A4C' : 'var(--foreground)',
-                fontWeight: o.id === value ? 600 : 400,
-              }}
-              onMouseEnter={e => { if (o.id !== value) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
-              onMouseLeave={e => { if (o.id !== value) e.currentTarget.style.backgroundColor = 'transparent'; }}
-            >{o.name}</button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -160,6 +103,7 @@ function toUIUser(u: ApiUser): AdminUser {
 function CredsModal({ name, login, password, onClose }: {
   name: string; login: string; password: string; onClose: () => void;
 }) {
+  useEscape(onClose);
   const [copied, setCopied] = useState<string | null>(null);
 
   function copy(text: string, key: string) {
@@ -172,7 +116,7 @@ function CredsModal({ name, login, password, onClose }: {
     <div style={{ backgroundColor: 'var(--muted)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>{label}</div>
-        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)', fontFamily: key === 'pass' ? 'monospace' : undefined, wordBreak: 'break-all' }}>{value}</div>
+        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)', wordBreak: 'break-all' }}>{value}</div>
       </div>
       <button type="button" onClick={() => copy(value, key)}
         style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: copied === key ? '#ECFDF5' : 'var(--background)', color: copied === key ? '#059669' : 'var(--muted-foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -200,7 +144,7 @@ function CredsModal({ name, login, password, onClose }: {
           {row('Password', password, 'pass')}
         </div>
         <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)' }}>
-          <button onClick={onClose} style={{ width: '100%', height: 38, borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
+          <button onClick={onClose} style={{ width: '100%', height: 38, borderRadius: 8, cursor: 'pointer', backgroundColor: 'var(--primary)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
             Done
           </button>
         </div>
@@ -223,17 +167,10 @@ function AdminModal({
   const [form, setForm]           = useState<FormState>(initial);
   const [showPass, setShowPass]   = useState(false);
   const [saving, setSaving]       = useState(false);
+  useEscape(onClose, !saving);
   const [serverError, setServerError] = useState('');
 
-  const inp: React.CSSProperties = {
-    width: '100%', height: 38, padding: '0 11px', borderRadius: 8,
-    border: '1px solid var(--border)', backgroundColor: 'var(--background)',
-    color: 'var(--foreground)', fontSize: '0.83rem', outline: 'none', boxSizing: 'border-box',
-  };
-  const lbl: React.CSSProperties = {
-    display: 'block', fontSize: '0.75rem', fontWeight: 600,
-    color: 'var(--muted-foreground)', marginBottom: 5,
-  };
+  const lbl: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 4 };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -292,7 +229,7 @@ function AdminModal({
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="Jane Smith"
-                style={inp}
+                className="field"
                 required
                 disabled={saving}
               />
@@ -303,19 +240,15 @@ function AdminModal({
                 type="text"
                 value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="admin@fleetadmin.io"
-                style={inp}
+                placeholder="name@brelo.app"
+                className="field"
                 required
                 disabled={saving}
               />
             </div>
             <div>
               <label style={lbl}>Role <span style={{ color: '#EF4444' }}>*</span></label>
-              <CustomSelect
-                value={form.role}
-                options={roles}
-                onChange={v => setForm(f => ({ ...f, role: v }))}
-              />
+              <SearchSelect value={form.role} options={roles.map(r => ({ value: r.id, label: r.name }))} placeholder="Select a role" onChange={v => setForm(f => ({ ...f, role: v }))} searchable={false} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
@@ -326,7 +259,7 @@ function AdminModal({
                     value={form.password}
                     onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                     placeholder={mode === 'edit' ? '••••••••' : 'Set password'}
-                    style={{ ...inp, paddingRight: 36 }}
+                    className="field" style={{ paddingRight: 36 }}
                     required={mode === 'create'}
                     disabled={saving}
                   />
@@ -368,7 +301,7 @@ function AdminModal({
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'var(--muted)' : 'var(--primary)', border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               {saving && <Loader2 size={14} className="animate-spin" />}
               {saving ? 'Saving…' : (mode === 'create' ? 'Add Admin' : 'Save Changes')}
             </button>
@@ -389,6 +322,7 @@ function AdminDetailModal({
   onClose: () => void;
   onEdit: () => void;
 }) {
+  useEscape(onClose);
   const rs   = ROLE_STYLE[user.role] ?? DEFAULT_ROLE_STYLE;
   const ss   = STATUS_CONFIG[user.status];
   const roleName = roles.find(r => r.id === user.role)?.name ?? user.role;
@@ -396,7 +330,7 @@ function AdminDetailModal({
   const Field = ({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
-      <span style={{ fontSize: '0.85rem', color: 'var(--foreground)', fontFamily: mono ? 'monospace' : undefined, wordBreak: 'break-all' }}>{value}</span>
+      <span style={{ fontSize: '0.85rem', color: 'var(--foreground)', wordBreak: 'break-all' }}>{value}</span>
     </div>
   );
 
@@ -445,7 +379,7 @@ function AdminDetailModal({
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
             Close
           </button>
-          <button onClick={onEdit} style={{ flex: 2, height: 38, borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
+          <button onClick={onEdit} style={{ flex: 2, height: 38, borderRadius: 8, cursor: 'pointer', backgroundColor: 'var(--primary)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
             Edit Admin
           </button>
         </div>
@@ -457,6 +391,10 @@ function AdminDetailModal({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 const EMPTY_FORM: FormState = { name: '', email: '', role: '', status: 'Active', password: '' };
+
+const STATUS_TABS: TabItem<'all' | 'Active' | 'Suspended'>[] = [
+  { id: 'all', label: 'All' }, { id: 'Active', label: 'Active' }, { id: 'Suspended', label: 'Suspended' },
+];
 
 export default function AdminUsersPage() {
   const { can } = useAuth();
@@ -471,6 +409,7 @@ export default function AdminUsersPage() {
   const [searchInput, setSearchInput]   = useState('');
   const [search, setSearch]             = useState('');
   const [roleFilter, setRoleFilter]     = useState<string>('all');
+  const [tab, setTab]                   = useState<'all' | 'Active' | 'Suspended'>('all');
   const [page, setPage]                 = useState(1);
   const [allCounts, setAllCounts]       = useState({ total: 0, active: 0, suspended: 0 });
 
@@ -497,6 +436,7 @@ export default function AdminUsersPage() {
       const qs = new URLSearchParams({ kind: 'admin' });
       if (search)            qs.set('q', search);
       if (roleFilter !== 'all') qs.set('role', roleFilter);
+      if (tab !== 'all')        qs.set('status', tab);
       const body = await api.getBody<ApiUsersBody>(`/users?${qs.toString()}`);
       const users = body.data ?? [];
       setRows(users.map(toUIUser));
@@ -510,7 +450,7 @@ export default function AdminUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [search, roleFilter]);
+  }, [search, roleFilter, tab]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -523,8 +463,6 @@ export default function AdminUsersPage() {
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
   const paginated  = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const start      = rows.length === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const end        = Math.min(page * PER_PAGE, rows.length);
   function goPage(p: number) { setPage(Math.min(Math.max(1, p), totalPages)); }
 
   async function handleCreate(f: FormState): Promise<void> {
@@ -578,13 +516,13 @@ export default function AdminUsersPage() {
   ];
 
   const TH = ({ children, right }: { children: React.ReactNode; right?: boolean }) => (
-    <th style={{ textAlign: right ? 'right' : 'left', padding: '9px 14px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', letterSpacing: '0.07em', textTransform: 'uppercase', backgroundColor: 'var(--muted)', whiteSpace: 'nowrap' }}>
+    <th style={{ textAlign: right ? 'right' : 'left', padding: '9px 14px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
       {children}
     </th>
   );
 
   return (
-    <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
+    <Page>
       {/* Modals */}
       {createOpen && (
         <AdminModal
@@ -624,52 +562,16 @@ export default function AdminUsersPage() {
 
       {createdCreds && <CredsModal {...createdCreds} onClose={() => setCreatedCreds(null)} />}
 
-      {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-        {[
-          { label: 'Total',     value: allCounts.total,     iconBg: '#178A4C' },
-          { label: 'Active',    value: allCounts.active,    iconBg: '#10B981' },
-          { label: 'Suspended', value: allCounts.suspended, iconBg: '#EF4444' },
-        ].map(({ label, value, iconBg }) => (
-          <div key={label} style={{ backgroundColor: 'var(--card)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
-            <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--muted-foreground)', marginBottom: 6 }}>{label}</div>
-              <div style={{ fontSize: '1.7rem', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1 }}>
-                {isLoading ? <Loader2 size={20} className="animate-spin" style={{ color: 'var(--muted-foreground)' }} /> : value}
-              </div>
-            </div>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-              <ShieldCheck size={19} />
-            </div>
-          </div>
-        ))}
-      </div>
+      <KpiRow>
+        <Kpi label="Total"     value={isLoading && rows.length === 0 ? <Dash /> : allCounts.total}     icon={<ShieldEllipsis size={17} />} />
+        <Kpi label="Active"    value={isLoading && rows.length === 0 ? <Dash /> : allCounts.active}    icon={<ShieldCheck size={17} />} />
+        <Kpi label="Suspended" value={isLoading && rows.length === 0 ? <Dash /> : allCounts.suspended} icon={<ShieldOff size={17} />} />
+      </KpiRow>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <h1 style={{ color: 'var(--foreground)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>Admin Users</h1>
-          <p style={{ color: 'var(--muted-foreground)', fontSize: '0.83rem', marginTop: 3 }}>Manage internal super admin staff</p>
-        </div>
-        {canCreate && (
-        <button
-          onClick={() => setCreateOpen(true)}
-          disabled={isLoading}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: isLoading ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600, opacity: isLoading ? 0.6 : 1 }}
-        >
-          <Plus size={15} /> Add Admin
-        </button>
-        )}
-      </div>
-
-      {/* Table card */}
-      <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-        {/* Controls */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ position: 'relative', flex: 1, maxWidth: 260 }}>
-            <Search size={14} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)', pointerEvents: 'none' }} />
-            <input value={searchInput} onChange={e => setSearchInput(e.target.value)} placeholder="Search admins..." style={{ paddingLeft: 28, paddingRight: 10, height: 34, borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.8rem', outline: 'none', width: '100%' }} />
-          </div>
+      <Card>
+        <Toolbar action={canCreate && <PrimaryButton icon={<Plus size={15} />} onClick={() => setCreateOpen(true)} disabled={isLoading}>Add admin</PrimaryButton>}>
+          <SearchBox value={searchInput} onChange={setSearchInput} placeholder="Search admins" />
+          <FilterTabs<'all' | 'Active' | 'Suspended'> tabs={STATUS_TABS} active={tab} onChange={t => { setTab(t); setPage(1); }} />
           <Dropdown<string>
             label="Role"
             options={roleFilterOptions.map(o => o.id)}
@@ -677,30 +579,16 @@ export default function AdminUsersPage() {
             onChange={v => { setRoleFilter(v); setPage(1); }}
             getOptionLabel={id => roleFilterOptions.find(o => o.id === id)?.name ?? id}
           />
-        </div>
+        </Toolbar>
 
-        {/* Loading / Error */}
-        {isLoading && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted-foreground)', fontSize: '0.85rem', padding: '48px 16px', justifyContent: 'center' }}>
-            <Loader2 size={18} className="animate-spin" /> Loading admin users…
-          </div>
-        )}
-
-        {!isLoading && loadError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, margin: 16, padding: '12px 16px', color: '#DC2626', fontSize: '0.85rem' }}>
-            {loadError}
-            <button onClick={fetchAll} style={{ marginLeft: 'auto', fontSize: '0.8rem', fontWeight: 600, color: '#DC2626', background: 'none', border: '1px solid #FECACA', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
-              Retry
-            </button>
-          </div>
-        )}
+        <TableState loading={isLoading && rows.length === 0} error={loadError ?? undefined} onRetry={fetchAll} what="admins" />
 
         {/* Table */}
-        {!isLoading && !loadError && (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        {!(isLoading && rows.length === 0) && !loadError && (
+          <div style={{ overflowX: 'auto', opacity: isLoading ? 0.55 : 1, transition: 'opacity 0.15s' }}>
+            <table className="tbl">
               <thead>
-                <tr><TH>User</TH><TH>Email</TH><TH>Role</TH><TH>Status</TH><TH right>Actions</TH></tr>
+                <tr><TH>User</TH><TH>Email</TH><TH>Role</TH><TH>Status</TH><th className="pin" /></tr>
               </thead>
               <tbody>
                 {paginated.map((u, i) => {
@@ -721,7 +609,7 @@ export default function AdminUsersPage() {
                           </div>
                         </button>
                       </td>
-                      <td style={{ padding: '11px 14px' }}><span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', fontFamily: 'monospace' }}>{u.login}</span></td>
+                      <td style={{ padding: '11px 14px' }}><span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>{u.login}</span></td>
                       <td style={{ padding: '11px 14px' }}>
                         <span style={{ display: 'inline-block', backgroundColor: rs.bg, color: rs.color, border: `1px solid ${rs.border}`, fontSize: '0.7rem', fontWeight: 700, padding: '3px 9px', borderRadius: 99 }}>{roleName}</span>
                       </td>
@@ -731,26 +619,12 @@ export default function AdminUsersPage() {
                           <span style={{ fontSize: '0.82rem', fontWeight: 500, color: ss.color }}>{u.status}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '11px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                          {canUpdate && (
-                          <button onClick={() => setEditTarget(u)} title="Edit"
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
-                            <Pencil size={13} />
-                          </button>
-                          )}
-                          {canDelete && (
-                          <button onClick={() => setDeleteTarget(u)} title="Delete"
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #FECACA', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FEE2E2')}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FEF2F2')}>
-                            <Trash2 size={13} />
-                          </button>
-                          )}
-                          {!canUpdate && !canDelete && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>—</span>}
-                        </div>
+                      <td className="pin">
+                        <RowActions>
+                          {canUpdate && <IconButton title="Edit" onClick={() => setEditTarget(u)}><Pencil size={13} /></IconButton>}
+                          {canDelete && <IconButton title="Delete" danger onClick={() => setDeleteTarget(u)}><Trash2 size={13} /></IconButton>}
+                          {!canUpdate && !canDelete && <Dash />}
+                        </RowActions>
                       </td>
                     </tr>
                   );
@@ -763,23 +637,8 @@ export default function AdminUsersPage() {
           </div>
         )}
 
-        {/* Pagination */}
-        {!isLoading && !loadError && (
-          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>Showing {start}–{end} of {rows.length} admins</span>
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              <button onClick={() => goPage(page - 1)} disabled={page === 1} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: page === 1 ? 'var(--muted-foreground)' : 'var(--foreground)', fontSize: '0.78rem', fontWeight: 500, cursor: page === 1 ? 'default' : 'pointer' }}>Prev</button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1).map((p, idx, arr) => (
-                <span key={p} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {idx > 0 && arr[idx - 1] !== p - 1 && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', padding: '0 2px' }}>…</span>}
-                  <button onClick={() => goPage(p)} style={{ width: 30, height: 30, borderRadius: 7, border: 'none', backgroundColor: p === page ? '#178A4C' : 'transparent', color: p === page ? '#fff' : 'var(--muted-foreground)', fontSize: '0.78rem', fontWeight: p === page ? 600 : 400, cursor: 'pointer' }}>{p}</button>
-                </span>
-              ))}
-              <button onClick={() => goPage(page + 1)} disabled={page === totalPages} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: page === totalPages ? 'var(--muted-foreground)' : 'var(--foreground)', fontSize: '0.78rem', fontWeight: 500, cursor: page === totalPages ? 'default' : 'pointer' }}>Next</button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+        {!(isLoading && rows.length === 0) && !loadError && <Pager page={page} totalPages={totalPages} total={rows.length} perPage={PER_PAGE} onPage={goPage} />}
+      </Card>
+    </Page>
   );
 }

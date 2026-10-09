@@ -22,28 +22,18 @@ export function FilterTabs<T extends string>({ tabs, active, onChange }: FilterT
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 transition-all"
+            className="flex items-center gap-1.5 transition-colors"
             style={{
-              backgroundColor: isActive ? '#178A4C' : 'transparent',
-              border: `1.5px solid ${isActive ? '#178A4C' : 'var(--border)'}`,
-              fontSize: '0.78rem',
-              fontWeight: isActive ? 600 : 400,
-              color: isActive ? '#ffffff' : 'var(--muted-foreground)',
+              height: 36,
+              padding: '0 11px',
+              borderRadius: 8,
+              backgroundColor: isActive ? 'var(--primary-soft)' : 'var(--card)',
+              border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
+              fontSize: 13,
+              fontWeight: isActive ? 600 : 500,
+              color: isActive ? 'var(--primary)' : 'var(--foreground)',
               whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={(e) => {
-              if (!isActive) {
-                const el = e.currentTarget as HTMLButtonElement;
-                el.style.borderColor = '#8FD3AE';
-                el.style.color = '#178A4C';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isActive) {
-                const el = e.currentTarget as HTMLButtonElement;
-                el.style.borderColor = 'var(--border)';
-                el.style.color = 'var(--muted-foreground)';
-              }
+              cursor: 'pointer',
             }}
           >
             {tab.icon}
@@ -51,12 +41,7 @@ export function FilterTabs<T extends string>({ tabs, active, onChange }: FilterT
             {tab.count !== undefined && (
               <span
                 className="rounded-full px-1.5 py-0.5 leading-none"
-                style={{
-                  backgroundColor: isActive ? 'rgba(255,255,255,0.22)' : 'var(--muted)',
-                  color: isActive ? '#ffffff' : 'var(--muted-foreground)',
-                  fontSize: '0.68rem',
-                  fontWeight: 600,
-                }}
+                style={{ backgroundColor: isActive ? 'var(--card)' : 'var(--muted)', color: isActive ? 'var(--primary)' : 'var(--muted-foreground)', fontSize: 11, fontWeight: 600 }}
               >
                 {tab.count}
               </span>

@@ -30,14 +30,18 @@ export function Dropdown<T extends string>({
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-lg px-3 py-2 transition-colors"
+        className="flex items-center gap-1.5 transition-colors"
         style={{
-          backgroundColor: isActive ? '#ECF7F0' : 'var(--card)',
-          border: `1px solid ${isActive ? '#8FD3AE' : 'var(--border)'}`,
-          fontSize: '0.8rem',
+          height: 36,
+          padding: '0 11px',
+          borderRadius: 8,
+          backgroundColor: isActive ? 'var(--primary-soft)' : 'var(--card)',
+          border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
+          fontSize: 13,
           fontWeight: 500,
-          color: isActive ? '#178A4C' : 'var(--foreground)',
+          color: isActive ? 'var(--primary)' : 'var(--foreground)',
           whiteSpace: 'nowrap',
+          cursor: 'pointer',
         }}
       >
         <SlidersHorizontal size={13} />
@@ -49,11 +53,13 @@ export function Dropdown<T extends string>({
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
-            className="absolute left-0 z-20 rounded-lg overflow-hidden shadow-lg py-1"
+            className="absolute left-0 z-20 rounded-lg shadow-lg py-1"
             style={{
               backgroundColor: 'var(--card)',
               border: '1px solid var(--border)',
               minWidth: 150,
+              maxHeight: 300,
+              overflowY: 'auto',
               top: 'calc(100% + 4px)',
             }}
           >
@@ -67,8 +73,8 @@ export function Dropdown<T extends string>({
                   style={{
                     fontSize: '0.8rem',
                     fontWeight: selected ? 600 : 400,
-                    color: selected ? '#178A4C' : 'var(--foreground)',
-                    backgroundColor: selected ? '#ECF7F0' : 'transparent',
+                    color: selected ? 'var(--primary)' : 'var(--foreground)',
+                    backgroundColor: selected ? 'var(--primary-soft)' : 'transparent',
                   }}
                   onMouseEnter={(e) => {
                     if (!selected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)';

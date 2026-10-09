@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X, Loader2, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Loader2, Layers, Blocks, Globe, Building2 } from 'lucide-react';
+import { useEscape } from '@/lib/useEscape';
 import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
+import { Kpi } from '@/components/shared/Kpi';
+import { Card, Dash, IconButton, KpiRow, Page, PrimaryButton, RowActions, SearchBox, TableState, Toolbar } from '@/components/shared/ui';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
 import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
 
@@ -51,17 +54,10 @@ function ModuleModal({ mode, initial, onClose, onSave }: {
 }) {
   const [form, setForm]               = useState<FormState>(initial);
   const [saving, setSaving]           = useState(false);
+  useEscape(onClose, !saving);
   const [serverError, setServerError] = useState('');
 
-  const inp: React.CSSProperties = {
-    width: '100%', height: 38, padding: '0 11px', borderRadius: 8,
-    border: '1px solid var(--border)', backgroundColor: 'var(--background)',
-    color: 'var(--foreground)', fontSize: '0.83rem', outline: 'none', boxSizing: 'border-box',
-  };
-  const lbl: React.CSSProperties = {
-    display: 'block', fontSize: '0.75rem', fontWeight: 600,
-    color: 'var(--muted-foreground)', marginBottom: 5,
-  };
+  const lbl: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 4 };
 
   function toggleAction(a: string) {
     setForm(f => ({
@@ -140,13 +136,13 @@ function ModuleModal({ mode, initial, onClose, onSave }: {
               <div>
                 <label style={lbl}>Key <span style={{ color: '#EF4444' }}>*</span></label>
                 <input value={form.key} onChange={e => setForm(f => ({ ...f, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') }))}
-                  placeholder="e.g. invoices" style={inp} required disabled={saving || mode === 'edit'} />
+                  placeholder="e.g. invoices" className="field" required disabled={saving || mode === 'edit'} />
                 {mode === 'edit' && <p style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginTop: 4 }}>Key cannot be changed.</p>}
               </div>
               <div>
                 <label style={lbl}>Label <span style={{ color: '#EF4444' }}>*</span></label>
                 <input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
-                  placeholder="e.g. Invoices" style={inp} required disabled={saving} />
+                  placeholder="e.g. Invoices" className="field" required disabled={saving} />
               </div>
             </div>
 
@@ -184,7 +180,7 @@ function ModuleModal({ mode, initial, onClose, onSave }: {
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'var(--muted)' : 'var(--primary)', border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               {saving && <Loader2 size={14} className="animate-spin" />}
               {saving ? 'Saving…' : mode === 'create' ? 'Create Module' : 'Save Changes'}
             </button>
@@ -214,6 +210,7 @@ export default function PermissionModulesPage() {
   const [isLoading, setIsLoading]     = useState(true);
   const [loadError, setLoadError]     = useState<string | null>(null);
   const [tab, setTab]                 = useState<TabId>('all');
+  const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen]   = useState(false);
   const [editTarget, setEditTarget]   = useState<ApiModule | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ApiModule | null>(null);
@@ -235,7 +232,10 @@ export default function PermissionModulesPage() {
 
   useEffect(() => { fetchModules(); }, [fetchModules]);
 
-  const filtered = tab === 'all' ? modules : modules.filter(m => m.scope === tab);
+  const q = search.trim().toLowerCase();
+  const filtered = modules.filter(m =>
+    (tab === 'all' || m.scope === tab) &&
+    (!q || m.label.toLowerCase().includes(q) || m.key.toLowerCase().includes(q)));
 
   async function handleCreate(f: FormState): Promise<void> {
     const created = await api.post<ApiModule>('/catalog/modules', {
@@ -276,77 +276,33 @@ export default function PermissionModulesPage() {
   }
 
   const TH = ({ children }: { children: React.ReactNode }) => (
-    <th style={{ textAlign: 'left', padding: '9px 16px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', letterSpacing: '0.07em', textTransform: 'uppercase', backgroundColor: 'var(--muted)', whiteSpace: 'nowrap' }}>
+    <th style={{ textAlign: 'left', padding: '10px 14px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
       {children}
     </th>
   );
 
   return (
-    <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
+    <Page>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <h1 style={{ color: 'var(--foreground)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>Permission Modules</h1>
-          <p style={{ color: 'var(--muted-foreground)', fontSize: '0.83rem', marginTop: 3 }}>
-            Define custom permission modules for platform and company roles
-          </p>
-        </div>
-        {canCreate && (
-        <button onClick={() => setCreateOpen(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}
-          onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; }}
-          onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}>
-          <Plus size={15} /> Create Module
-        </button>
-        )}
-      </div>
+      <KpiRow>
+        <Kpi label="Total"    value={isLoading ? <Dash /> : modules.length}                                     icon={<Blocks size={17} />} />
+        <Kpi label="Platform" value={isLoading ? <Dash /> : modules.filter(m => m.scope === 'platform').length} icon={<Globe size={17} />} />
+        <Kpi label="Company"  value={isLoading ? <Dash /> : modules.filter(m => m.scope === 'company').length}  icon={<Building2 size={17} />} />
+      </KpiRow>
 
-      {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-        {[
-          { label: 'Total',    value: modules.length,                                       color: '#178A4C' },
-          { label: 'Platform', value: modules.filter(m => m.scope === 'platform').length,   color: '#178A4C' },
-          { label: 'Company',  value: modules.filter(m => m.scope === 'company').length,    color: '#7C3AED' },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ backgroundColor: 'var(--card)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
-            <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--muted-foreground)', marginBottom: 6 }}>{label}</div>
-              <div style={{ fontSize: '1.7rem', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1 }}>
-                {isLoading ? <Loader2 size={20} className="animate-spin" style={{ color: 'var(--muted-foreground)' }} /> : value}
-              </div>
-            </div>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-              <Layers size={19} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Table card */}
-      <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <Card>
+        <Toolbar action={canCreate && <PrimaryButton icon={<Plus size={15} />} onClick={() => setCreateOpen(true)}>Create module</PrimaryButton>}>
+          <SearchBox value={search} onChange={setSearch} placeholder="Search modules" />
           <FilterTabs<TabId> tabs={TABS} active={tab} onChange={setTab} />
-        </div>
+        </Toolbar>
 
-        {isLoading && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted-foreground)', fontSize: '0.85rem', padding: '48px 16px', justifyContent: 'center' }}>
-            <Loader2 size={18} className="animate-spin" /> Loading modules…
-          </div>
-        )}
-
-        {!isLoading && loadError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, margin: 16, padding: '12px 16px', color: '#DC2626', fontSize: '0.85rem' }}>
-            {loadError}
-            <button onClick={fetchModules} style={{ marginLeft: 'auto', fontSize: '0.8rem', fontWeight: 600, color: '#DC2626', background: 'none', border: '1px solid #FECACA', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>Retry</button>
-          </div>
-        )}
+        <TableState loading={isLoading} error={loadError ?? undefined} onRetry={fetchModules} what="modules" />
 
         {!isLoading && !loadError && (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table className="tbl">
               <thead>
-                <tr><TH>Module</TH><TH>Key</TH><TH>Scope</TH><TH>Actions</TH><TH>Type</TH><th style={{ textAlign: 'right', padding: '9px 16px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', letterSpacing: '0.07em', textTransform: 'uppercase', backgroundColor: 'var(--muted)' }}>Actions</th></tr>
+                <tr><TH>Module</TH><TH>Key</TH><TH>Scope</TH><TH>Actions</TH><TH>Type</TH><th className="pin" /></tr>
               </thead>
               <tbody>
                 {filtered.map((m, i) => {
@@ -357,7 +313,7 @@ export default function PermissionModulesPage() {
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
 
                       {/* Label */}
-                      <td style={{ padding: '13px 16px' }}>
+                      <td style={{ padding: '10px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: ss.bg, border: `1px solid ${ss.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Layers size={15} color={ss.color} />
@@ -367,19 +323,19 @@ export default function PermissionModulesPage() {
                       </td>
 
                       {/* Key */}
-                      <td style={{ padding: '13px 16px' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: '0.78rem', color: 'var(--muted-foreground)', backgroundColor: 'var(--muted)', padding: '2px 8px', borderRadius: 5 }}>{m.key}</span>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', backgroundColor: 'var(--muted)', padding: '2px 8px', borderRadius: 5 }}>{m.key}</span>
                       </td>
 
                       {/* Scope */}
-                      <td style={{ padding: '13px 16px' }}>
+                      <td style={{ padding: '10px 14px' }}>
                         <span style={{ display: 'inline-block', backgroundColor: ss.bg, color: ss.color, border: `1px solid ${ss.border}`, fontSize: '0.7rem', fontWeight: 700, padding: '3px 9px', borderRadius: 99 }}>
                           {m.scope}
                         </span>
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '13px 16px' }}>
+                      <td style={{ padding: '10px 14px' }}>
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                           {m.actions.map(a => (
                             <span key={a} style={{ fontSize: '0.68rem', fontWeight: 600, backgroundColor: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', padding: '2px 7px', borderRadius: 99 }}>
@@ -390,7 +346,7 @@ export default function PermissionModulesPage() {
                       </td>
 
                       {/* System badge */}
-                      <td style={{ padding: '13px 16px' }}>
+                      <td style={{ padding: '10px 14px' }}>
                         {m.system
                           ? <span style={{ fontSize: '0.68rem', fontWeight: 700, backgroundColor: '#F1F5F9', color: '#64748B', border: '1px solid #E2E8F0', padding: '2px 8px', borderRadius: 99 }}>System</span>
                           : <span style={{ fontSize: '0.68rem', fontWeight: 700, backgroundColor: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', padding: '2px 8px', borderRadius: 99 }}>Custom</span>
@@ -398,27 +354,12 @@ export default function PermissionModulesPage() {
                       </td>
 
                       {/* Edit / Delete */}
-                      <td style={{ padding: '13px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                          {canUpdate && (
-                          <button onClick={() => setEditTarget(m)} title="Edit module"
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'transparent', color: 'var(--muted-foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--muted)'; e.currentTarget.style.color = 'var(--foreground)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; }}>
-                            <Pencil size={13} />
-                          </button>
-                          )}
-                          {canDelete && (
-                          <button onClick={() => { setDeleteTarget(m); setDeleteError(null); }} title="Delete module"
-                            disabled={m.system}
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'transparent', color: 'var(--muted-foreground)', cursor: m.system ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: m.system ? 0.35 : 1 }}
-                            onMouseEnter={e => { if (!m.system) { e.currentTarget.style.backgroundColor = '#FEF2F2'; e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.borderColor = '#FECACA'; } }}
-                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--muted-foreground)'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
-                            <Trash2 size={13} />
-                          </button>
-                          )}
-                          {!canUpdate && !canDelete && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>—</span>}
-                        </div>
+                      <td className="pin">
+                        <RowActions>
+                          {canUpdate && <IconButton title="Edit module" onClick={() => setEditTarget(m)}><Pencil size={13} /></IconButton>}
+                          {canDelete && <IconButton title={m.system ? 'System modules cannot be deleted' : 'Delete module'} danger disabled={m.system} onClick={() => { setDeleteTarget(m); setDeleteError(null); }}><Trash2 size={13} /></IconButton>}
+                          {!canUpdate && !canDelete && <Dash />}
+                        </RowActions>
                       </td>
                     </tr>
                   );
@@ -430,7 +371,7 @@ export default function PermissionModulesPage() {
             </table>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Modals */}
       {createOpen && (
@@ -454,6 +395,6 @@ export default function PermissionModulesPage() {
           error={deleteError ?? undefined}
         />
       )}
-    </div>
+    </Page>
   );
 }

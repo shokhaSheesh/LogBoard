@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Bell, Plus, X, Loader2, Send, Eye, ChevronLeft, ChevronRight,
+  Bell, Plus, X, Loader2, Send, Eye,
   User as UserIcon, Users as UsersIcon, Building2, CheckCheck, Check,
 } from 'lucide-react';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { SearchSelect, type SearchSelectOption } from '@/components/shared/SearchSelect';
+import { Card, IconButton, Page, Pager, PrimaryButton, SearchBox, TableState, Toolbar } from '@/components/shared/ui';
+import { fmtDateTime as fmtStamp } from '@/lib/dates';
+import { useEscape } from '@/lib/useEscape';
 import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 
@@ -77,14 +80,10 @@ const AUDIENCE_META: Record<AudienceKind, { label: string; icon: React.ReactNode
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtDateTime(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return fmtStamp(iso) || '—';
 }
 
-const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '0.75rem', fontWeight: 600,
-  color: 'var(--muted-foreground)', marginBottom: 5, letterSpacing: '0.03em',
-};
+const labelStyle: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 4 };
 
 // ── Compose modal ─────────────────────────────────────────────────────────────
 
@@ -100,9 +99,9 @@ function ComposeModal({ users, companies, adminRoles, onClose, onSent }: {
   const [kind, setKind]           = useState<AudienceKind>('role');
   const [targetId, setTargetId]   = useState('');
   const [saving, setSaving]       = useState(false);
+  useEscape(onClose, !saving);
   const [error, setError]         = useState('');
 
-  const inp: React.CSSProperties = { width: '100%', padding: '8px 11px', borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--card)', color: 'var(--foreground)', fontSize: '0.83rem', outline: 'none', boxSizing: 'border-box' };
 
   const roleOptions: SearchSelectOption[] = [
     ...BOARD_ROLES.map(r => ({ value: r.value, label: r.label, sublabel: 'Board role' })),
@@ -167,12 +166,12 @@ function ComposeModal({ users, companies, adminRoles, onClose, onSent }: {
 
             <div>
               <label style={labelStyle}>Title <span style={{ color: '#EF4444' }}>*</span></label>
-              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Scheduled maintenance" style={inp} autoFocus />
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Scheduled maintenance" className="field" autoFocus />
             </div>
 
             <div>
               <label style={labelStyle}>Message <span style={{ color: '#EF4444' }}>*</span></label>
-              <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="e.g. The board will be briefly unavailable Sunday 02:00 UTC." rows={3} style={{ ...inp, resize: 'vertical', minHeight: 72, fontFamily: 'inherit' }} />
+              <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="e.g. The board will be briefly unavailable Sunday 02:00 UTC." rows={3} className="field" style={{ resize: 'vertical', minHeight: 72, fontFamily: 'inherit' }} />
             </div>
 
             <div>
@@ -203,7 +202,7 @@ function ComposeModal({ users, companies, adminRoles, onClose, onSent }: {
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}
             >Cancel</button>
             <button type="submit" disabled={saving}
-              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.8 : 1 }}
+              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', backgroundColor: 'var(--primary)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.8 : 1 }}
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               {saving ? 'Sending…' : 'Send Notification'}
@@ -223,6 +222,7 @@ function DetailModal({ batch, audienceLabel, userName, onClose }: {
   userName: (id: string) => string;
   onClose: () => void;
 }) {
+  useEscape(onClose);
   const [recipients, setRecipients] = useState<RecipientRow[]>([]);
   const [meta, setMeta]             = useState<ListMeta | null>(null);
   const [loading, setLoading]       = useState(true);
@@ -390,78 +390,53 @@ export default function NotificationsPage() {
   const totalPages = meta ? Math.max(1, Math.ceil(meta.total / PER_PAGE)) : 1;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
+    <Page>
 
       {composeOpen && <ComposeModal users={users} companies={companies} adminRoles={adminRoles} onClose={() => setComposeOpen(false)} onSent={handleSent} />}
       {detail && <DetailModal batch={detail} audienceLabel={audienceLabel} userName={userName} onClose={() => setDetail(null)} />}
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ color: 'var(--foreground)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>Notifications</h1>
-          <p style={{ color: 'var(--muted-foreground)', fontSize: '0.83rem', marginTop: 3 }}>Send platform announcements and review delivery</p>
-        </div>
-        {can('notifications.create') && (
-          <button onClick={() => setComposeOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600 }}>
-            <Plus size={15} /> Send Notification
-          </button>
-        )}
-      </div>
-
-      {/* Filters */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
-          <input value={searchInput} onChange={e => setSearchInput(e.target.value)} placeholder="Search title or message…"
-            style={{ width: '100%', height: 38, padding: '0 12px', borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--card)', color: 'var(--foreground)', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#8FD3AE')}
-            onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+      <Card>
+        <Toolbar action={can('notifications.create') && <PrimaryButton icon={<Plus size={15} />} onClick={() => setComposeOpen(true)}>Send notification</PrimaryButton>}>
+          <SearchBox value={searchInput} onChange={setSearchInput} placeholder="Search title or message" />
+          <Dropdown
+            label="Audience"
+            options={['all', 'role', 'company', 'user'] as ('all' | AudienceKind)[]}
+            value={kindFilter}
+            onChange={v => { setKindFilter(v); setPage(1); }}
+            getOptionLabel={v => v === 'all' ? 'All Audiences' : AUDIENCE_META[v as AudienceKind].label}
           />
-        </div>
-        <Dropdown
-          label="Audience"
-          options={['all', 'role', 'company', 'user'] as ('all' | AudienceKind)[]}
-          value={kindFilter}
-          onChange={v => { setKindFilter(v); setPage(1); }}
-          getOptionLabel={v => v === 'all' ? 'All Audiences' : AUDIENCE_META[v as AudienceKind].label}
-        />
-      </div>
+        </Toolbar>
 
-      {isLoading && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '80px 0', color: 'var(--muted-foreground)', fontSize: '0.85rem' }}><Loader2 size={18} className="animate-spin" /> Loading notifications…</div>}
-      {!isLoading && loadError && <div style={{ textAlign: 'center', padding: '80px 0', color: '#B91C1C', fontSize: '0.85rem' }}>{loadError}</div>}
+        <TableState loading={isLoading && rows.length === 0} error={loadError || undefined} what="notifications" />
 
-      {!isLoading && !loadError && (
-        <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        {!(isLoading && rows.length === 0) && !loadError && (
+          <div style={{ overflowX: 'auto', opacity: isLoading ? 0.55 : 1, transition: 'opacity 0.15s' }}>
+          <table className="tbl">
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--muted)' }}>
-                {['Notification', 'Audience', 'Recipients', 'Read', 'Sent', ''].map(h => (
-                  <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted-foreground)', letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
+              <tr>
+                {['Notification', 'Audience', 'Recipients', 'Read', 'Sent'].map(h => <th key={h}>{h}</th>)}
+                <th className="pin" />
               </tr>
             </thead>
             <tbody>
-              {rows.map((b, i) => {
+              {rows.map((b) => {
                 const m = AUDIENCE_META[b.audience.kind];
                 const readPct = b.recipients > 0 ? Math.round((b.read / b.recipients) * 100) : 0;
                 return (
-                  <tr key={b.batch_id} style={{ borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none', backgroundColor: 'var(--card)' }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--card)')}
-                  >
-                    <td style={{ padding: '13px 16px', maxWidth: 280 }}>
+                  <tr key={b.batch_id}>
+                    <td style={{ padding: '10px 14px', maxWidth: 280 }}>
                       <div style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.title}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.body}</div>
                     </td>
-                    <td style={{ padding: '13px 16px' }}>
+                    <td style={{ padding: '10px 14px' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, backgroundColor: m.bg, color: m.color, border: `1px solid ${m.color}30`, borderRadius: 99, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {m.icon} {audienceLabel(b.audience)}
                       </span>
                     </td>
-                    <td style={{ padding: '13px 16px' }}>
+                    <td style={{ padding: '10px 14px' }}>
                       <span style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--foreground)' }}>{b.recipients}</span>
                     </td>
-                    <td style={{ padding: '13px 16px', minWidth: 120 }}>
+                    <td style={{ padding: '10px 14px', minWidth: 120 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ flex: 1, maxWidth: 70, height: 6, borderRadius: 99, backgroundColor: 'var(--muted)', overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${readPct}%`, backgroundColor: '#22C55E', borderRadius: 99 }} />
@@ -469,17 +444,11 @@ export default function NotificationsPage() {
                         <span style={{ fontSize: '0.74rem', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>{b.read}/{b.recipients}</span>
                       </div>
                     </td>
-                    <td style={{ padding: '13px 16px' }}>
+                    <td style={{ padding: '10px 14px' }}>
                       <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>{fmtDateTime(b.sent_at)}</span>
                     </td>
-                    <td style={{ padding: '13px 16px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button onClick={() => setDetail(b)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 500, color: 'var(--foreground)', whiteSpace: 'nowrap' }}
-                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}
-                        ><Eye size={12} /> View</button>
-                      </div>
+                    <td className="pin">
+                      <IconButton title="View" onClick={() => setDetail(b)}><Eye size={13} /></IconButton>
                     </td>
                   </tr>
                 );
@@ -488,32 +457,16 @@ export default function NotificationsPage() {
                 <tr><td colSpan={6} style={{ padding: '56px 24px', textAlign: 'center' }}>
                   <Bell size={28} style={{ color: 'var(--muted-foreground)', opacity: 0.4, margin: '0 auto 10px' }} />
                   <div style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
-                    {search || kindFilter !== 'all' ? 'No notifications match your filters.' : 'No notifications sent yet. Click "Send Notification" to announce something.'}
+                    {search || kindFilter !== 'all' ? 'No notifications match your filters.' : 'No notifications sent yet.'}
                   </div>
                 </td></tr>
               )}
             </tbody>
           </table>
-
-          {meta && meta.total > PER_PAGE && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>
-                Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, meta.total)} of {meta.total}
-              </span>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', cursor: page === 1 ? 'not-allowed' : 'pointer', color: 'var(--foreground)', opacity: page === 1 ? 0.4 : 1, fontSize: '0.78rem' }}>
-                  <ChevronLeft size={13} /> Prev
-                </button>
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', cursor: page >= totalPages ? 'not-allowed' : 'pointer', color: 'var(--foreground)', opacity: page >= totalPages ? 0.4 : 1, fontSize: '0.78rem' }}>
-                  Next <ChevronRight size={13} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+        {!(isLoading && rows.length === 0) && !loadError && meta && <Pager page={page} totalPages={totalPages} total={meta.total} perPage={PER_PAGE} onPage={setPage} />}
+      </Card>
+    </Page>
   );
 }

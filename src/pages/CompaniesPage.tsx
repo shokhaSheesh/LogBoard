@@ -1,12 +1,18 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  Search, Building2, CheckCircle2, Clock, XCircle,
-  Plus, Download, Eye, Pencil, Trash2, X,
-  Phone, Send, Shield, Camera, ChevronDown, ChevronLeft, ChevronRight, Loader2,
+  Building2, CheckCircle2, Clock, XCircle,
+  Plus, Pencil, Trash2, X,
+  Phone, Send, Shield, Loader2,
 } from 'lucide-react';
-import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
+import { Kpi } from '@/components/shared/Kpi';
+import { Card, Dash, IconButton, KpiRow, Page, Pager, PrimaryButton, RowActions, SearchBox, TableState, Toolbar } from '@/components/shared/ui';
+import { DatePicker } from '@/components/shared/DatePicker';
+import { ALL_TIME, PeriodFilter, type Period } from '@/components/shared/PeriodFilter';
+import { SearchSelect } from '@/components/shared/SearchSelect';
+import { addDays, dayOf, dayToStamp, fmtDate, inPeriod, isoDay } from '@/lib/dates';
+import { useEscape } from '@/lib/useEscape';
 import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 
@@ -35,7 +41,6 @@ interface Company {
   mc: string;
   name: string;
   initials: string;
-  logo?: string;
   logoColor: string;
   ownerId: string;
   owner: string;
@@ -44,8 +49,8 @@ interface Company {
   ownerInitials: string;
   ownerColor: string;
   plan: string;
-  planExpiry: string;
-  registeredDate: string;
+  planExpiry: string;      // YYYY-MM-DD, or ''
+  createdAt: string;
   status: Status;
   eld: string;
 }
@@ -93,7 +98,6 @@ const ELD_COLOR: Record<string, string> = {
 const COLORS = ['#2563EB','#8B5CF6','#10B981','#F59E0B','#EC4899','#14B8A6','#6366F1','#F97316'];
 
 type TabId = 'all' | Status;
-const STATUS_OPTS: ('all' | Status)[] = ['all', 'Active', 'Pending', 'Suspended'];
 const ELD_OPTIONS = ['None', 'Samsara', 'Motive', 'Omnitracs', 'PeopleNet', 'KeepTruckin'];
 
 const PER_PAGE = 10;
@@ -109,10 +113,6 @@ function colorFromStr(s: string): string {
 function toUICompany(a: ApiCompany): Company {
   const initials      = a.name.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
   const ownerInitials = a.owner.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
-  const planExpiry    = a.plan_expiry ? fmtDStr(new Date(a.plan_expiry)) : '';
-  const registeredDate = a.created_at
-    ? new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : '';
   return {
     id: a.id, mc: a.mc, name: a.name, initials,
     logoColor: colorFromStr(a.id),
@@ -122,8 +122,8 @@ function toUICompany(a: ApiCompany): Company {
     ownerTelegram: a.owner_telegram,
     ownerInitials,
     ownerColor: colorFromStr(a.id + '_owner'),
-    plan: a.plan, planExpiry,
-    registeredDate, status: a.status, eld: a.eld,
+    plan: a.plan, planExpiry: dayOf(a.plan_expiry),
+    createdAt: a.created_at, status: a.status, eld: a.eld,
   };
 }
 
@@ -136,13 +136,7 @@ function toApiPayload(f: FormState) {
     owner_phone: f.ownerPhone,
     owner_telegram: f.ownerTelegram,
     plan: f.plan,
-    plan_expiry: f.planExpiry ? (() => {
-      const d = new Date(f.planExpiry);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}T00:00:00Z`;
-    })() : '',
+    plan_expiry: dayToStamp(f.planExpiry),
     eld: f.eld,
     status: f.status,
   };
@@ -160,407 +154,27 @@ function TruckIcon() {
   return <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect width={7} height={7} x={14} y={10} rx={1}/><circle cx={7.5} cy={17.5} r={2.5}/><circle cx={17.5} cy={17.5} r={2.5}/></svg>;
 }
 
-// ── Date utilities ────────────────────────────────────────────────────────────
-
-const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const DAY_HDRS    = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-
-function calDays(y: number, m: number): (number | null)[] {
-  const first = new Date(y, m, 1).getDay();
-  const count = new Date(y, m + 1, 0).getDate();
-  const cells: (number | null)[] = Array(first).fill(null);
-  for (let d = 1; d <= count; d++) cells.push(d);
-  while (cells.length % 7) cells.push(null);
-  return cells;
-}
-function yearBase(y: number) { return Math.floor(y / 12) * 12; }
-function parseDStr(s: string): Date | null {
-  if (!s) return null;
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
-}
-function fmtDStr(d: Date): string {
-  return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-}
-
-// ── CustomSelect ──────────────────────────────────────────────────────────────
-
-function CustomSelect({ value, options, onChange }: {
-  value: string;
-  options: string[];
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen]           = useState(false);
-  const [ready, setReady]         = useState(false);
-  const trigRef                   = useRef<HTMLButtonElement>(null);
-  const popRef                    = useRef<HTMLDivElement>(null);
-  const [pos, setPos]             = useState({ top: 0, left: 0, width: 0 });
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => {
-      if (trigRef.current?.contains(e.target as Node)) return;
-      if (popRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || ready || !popRef.current || !trigRef.current) return;
-    const pop  = popRef.current.getBoundingClientRect();
-    const trig = trigRef.current.getBoundingClientRect();
-    if (pop.bottom > window.innerHeight - 8) {
-      setPos(p => ({ ...p, top: Math.max(8, trig.top - pop.height - 4) }));
-    }
-    setReady(true);
-  }, [open, ready]);
-
-  function toggle() {
-    if (!open && trigRef.current) {
-      const r = trigRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
-      setReady(false);
-    }
-    setOpen(o => !o);
-  }
-
-  return (
-    <>
-      <button ref={trigRef} type="button" onClick={toggle}
-        style={{
-          width: '100%', padding: '7px 11px', borderRadius: 8,
-          border: `1px solid ${open ? '#8FD3AE' : 'var(--border)'}`,
-          fontSize: '0.82rem', color: 'var(--foreground)', backgroundColor: 'var(--card)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: 6, outline: 'none',
-        }}
-        onMouseEnter={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = '#8FD3AE'; }}
-        onMouseLeave={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
-      >
-        <span>{value}</span>
-        <ChevronDown size={13} style={{ flexShrink: 0, opacity: 0.5, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
-      </button>
-
-      {open && (
-        <div ref={popRef} style={{
-          position: 'fixed', top: pos.top, left: pos.left, width: pos.width,
-          zIndex: 9999, backgroundColor: 'var(--card)', border: '1px solid var(--border)',
-          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
-          overflow: 'hidden', maxHeight: 220, overflowY: 'auto',
-          opacity: ready ? 1 : 0, transition: 'opacity 80ms',
-        }}>
-          {options.map((o) => (
-            <button key={o} type="button" onClick={() => { onChange(o); setOpen(false); }}
-              style={{
-                width: '100%', padding: '8px 12px', textAlign: 'left', fontSize: '0.82rem',
-                border: 'none', cursor: 'pointer', display: 'block',
-                backgroundColor: o === value ? '#ECF7F0' : 'transparent',
-                color: o === value ? '#178A4C' : 'var(--foreground)',
-                fontWeight: o === value ? 600 : 400,
-              }}
-              onMouseEnter={(e) => { if (o !== value) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
-              onMouseLeave={(e) => { if (o !== value) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-            >{o}</button>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-// ── DatePicker ────────────────────────────────────────────────────────────────
-
-function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen]   = useState(false);
-  const [view, setView]   = useState<'day' | 'month' | 'year'>('day');
-  const [ready, setReady] = useState(false);
-  const parsed = parseDStr(value);
-  const today  = new Date();
-
-  const [cur, setCur] = useState(() => {
-    const d = parsed || today;
-    return { y: d.getFullYear(), m: d.getMonth() };
-  });
-
-  const trigRef = useRef<HTMLButtonElement>(null);
-  const popRef  = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => {
-      if (trigRef.current?.contains(e.target as Node)) return;
-      if (popRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || ready || !popRef.current || !trigRef.current) return;
-    const pop  = popRef.current.getBoundingClientRect();
-    const trig = trigRef.current.getBoundingClientRect();
-    if (pop.bottom > window.innerHeight - 8) {
-      setPos(p => ({ ...p, top: Math.max(8, trig.top - pop.height - 4) }));
-    }
-    setReady(true);
-  }, [open, ready]);
-
-  function handleOpen() {
-    if (!open && trigRef.current) {
-      const r = trigRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
-      const d = parsed || today;
-      setCur({ y: d.getFullYear(), m: d.getMonth() });
-      setView('day');
-      setReady(false);
-    }
-    setOpen(o => !o);
-  }
-
-  const base    = yearBase(cur.y);
-  const days    = calDays(cur.y, cur.m);
-  const selDay  = parsed && parsed.getFullYear() === cur.y && parsed.getMonth() === cur.m ? parsed.getDate() : -1;
-  const isToday = (d: number) => today.getFullYear() === cur.y && today.getMonth() === cur.m && today.getDate() === d;
-
-  const NavBtn = ({ onClick, icon }: { onClick: () => void; icon: React.ReactNode }) => (
-    <button type="button" onClick={onClick}
-      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted-foreground)', padding: '4px 6px', borderRadius: 6, display: 'flex' }}
-      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-    >{icon}</button>
-  );
-
-  const HeadBtn = ({ label, onClick }: { label: string; onClick: () => void }) => (
-    <button type="button" onClick={onClick}
-      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--foreground)', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 3, padding: '4px 8px', borderRadius: 6 }}
-      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-    >
-      {label} <ChevronDown size={12} style={{ opacity: 0.5 }} />
-    </button>
-  );
-
-  return (
-    <>
-      <button ref={trigRef} type="button" onClick={handleOpen}
-        style={{
-          width: '100%', padding: '7px 11px', borderRadius: 8,
-          border: `1px solid ${open ? '#8FD3AE' : 'var(--border)'}`,
-          fontSize: '0.82rem', backgroundColor: 'var(--muted)', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
-          color: value ? 'var(--foreground)' : 'var(--muted-foreground)', outline: 'none',
-        }}
-        onMouseEnter={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = '#8FD3AE'; }}
-        onMouseLeave={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
-      >
-        <span>{value || 'Select date'}</span>
-        <CalendarIcon />
-      </button>
-
-      {open && (
-        <div ref={popRef} style={{
-          position: 'fixed', top: pos.top, left: pos.left, width: Math.max(pos.width, 268),
-          zIndex: 9999, backgroundColor: 'var(--card)', border: '1px solid var(--border)',
-          borderRadius: 14, boxShadow: '0 12px 32px rgba(0,0,0,0.16)', padding: 12,
-          opacity: ready ? 1 : 0, transition: 'opacity 80ms',
-        }}>
-
-          {view === 'day' && <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <NavBtn onClick={() => { const d = new Date(cur.y, cur.m - 1); setCur({ y: d.getFullYear(), m: d.getMonth() }); }} icon={<ChevronLeft size={15} />} />
-              <HeadBtn label={`${MONTH_SHORT[cur.m]} ${cur.y}`} onClick={() => setView('month')} />
-              <NavBtn onClick={() => { const d = new Date(cur.y, cur.m + 1); setCur({ y: d.getFullYear(), m: d.getMonth() }); }} icon={<ChevronRight size={15} />} />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
-              {DAY_HDRS.map(h => (
-                <div key={h} style={{ textAlign: 'center', fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted-foreground)', padding: '3px 0' }}>{h}</div>
-              ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
-              {days.map((d, i) => (
-                <button key={i} type="button" disabled={!d} onClick={() => d && (onChange(fmtDStr(new Date(cur.y, cur.m, d))), setOpen(false))}
-                  style={{
-                    aspectRatio: '1', borderRadius: '50%', border: 'none', cursor: d ? 'pointer' : 'default',
-                    fontSize: '0.78rem', fontWeight: d === selDay || (d !== null && isToday(d)) ? 600 : 400,
-                    backgroundColor: d === selDay ? '#178A4C' : 'transparent',
-                    color: d === selDay ? '#fff' : (d !== null && isToday(d)) ? '#178A4C' : d ? 'var(--foreground)' : 'transparent',
-                    outline: (d !== null && isToday(d) && d !== selDay) ? '2px solid #178A4C' : 'none',
-                    outlineOffset: -2,
-                  }}
-                  onMouseEnter={(e) => { if (d && d !== selDay) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
-                  onMouseLeave={(e) => { if (d !== selDay) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-                >{d ?? ''}</button>
-              ))}
-            </div>
-            {value && (
-              <button type="button" onClick={() => { onChange(''); setOpen(false); }}
-                style={{ marginTop: 8, width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--muted-foreground)', padding: '3px 0', textAlign: 'center' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--foreground)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted-foreground)')}
-              >Clear</button>
-            )}
-          </>}
-
-          {view === 'month' && <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <NavBtn onClick={() => setCur(c => ({ ...c, y: c.y - 1 }))} icon={<ChevronLeft size={15} />} />
-              <HeadBtn label={`${cur.y}`} onClick={() => setView('year')} />
-              <NavBtn onClick={() => setCur(c => ({ ...c, y: c.y + 1 }))} icon={<ChevronRight size={15} />} />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
-              {MONTH_SHORT.map((m, mi) => {
-                const isSel = !!(parsed && parsed.getFullYear() === cur.y && parsed.getMonth() === mi);
-                const isCur = today.getFullYear() === cur.y && today.getMonth() === mi;
-                return (
-                  <button key={m} type="button" onClick={() => { setCur(c => ({ ...c, m: mi })); setView('day'); }}
-                    style={{
-                      padding: '9px 4px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                      fontSize: '0.82rem', fontWeight: isSel || isCur ? 600 : 400,
-                      backgroundColor: isSel ? '#178A4C' : isCur ? '#ECF7F0' : 'transparent',
-                      color: isSel ? '#fff' : isCur ? '#178A4C' : 'var(--foreground)',
-                    }}
-                    onMouseEnter={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#DDF1E5' : 'var(--muted)'; }}
-                    onMouseLeave={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#ECF7F0' : 'transparent'; }}
-                  >{m}</button>
-                );
-              })}
-            </div>
-          </>}
-
-          {view === 'year' && <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <NavBtn onClick={() => setCur(c => ({ ...c, y: yearBase(c.y) - 1 }))} icon={<ChevronLeft size={15} />} />
-              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--foreground)' }}>{base} – {base + 11}</span>
-              <NavBtn onClick={() => setCur(c => ({ ...c, y: yearBase(c.y) + 12 }))} icon={<ChevronRight size={15} />} />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
-              {Array.from({ length: 12 }, (_, i) => base + i).map(y => {
-                const isSel = !!(parsed && parsed.getFullYear() === y);
-                const isCur = today.getFullYear() === y;
-                return (
-                  <button key={y} type="button" onClick={() => { setCur(c => ({ ...c, y })); setView('month'); }}
-                    style={{
-                      padding: '9px 4px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                      fontSize: '0.82rem', fontWeight: isSel || isCur ? 600 : 400,
-                      backgroundColor: isSel ? '#178A4C' : isCur ? '#ECF7F0' : 'transparent',
-                      color: isSel ? '#fff' : isCur ? '#178A4C' : 'var(--foreground)',
-                    }}
-                    onMouseEnter={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#DDF1E5' : 'var(--muted)'; }}
-                    onMouseLeave={(e) => { if (!isSel) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isCur ? '#ECF7F0' : 'transparent'; }}
-                  >{y}</button>
-                );
-              })}
-            </div>
-          </>}
-
-        </div>
-      )}
-    </>
-  );
-}
-
-// ── Logo upload ───────────────────────────────────────────────────────────────
-
-function LogoUpload({ initials, logoColor, logo, onChange }: {
-  initials: string;
-  logoColor: string;
-  logo: string;
-  onChange: (v: string) => void;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [hover, setHover] = useState(false);
-
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => { if (typeof ev.target?.result === 'string') onChange(ev.target.result); };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  }
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '4px 0 8px' }}>
-      <div
-        onClick={() => fileRef.current?.click()}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        style={{
-          width: 64, height: 64, borderRadius: 12, cursor: 'pointer', position: 'relative',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          backgroundColor: logoColor + '22', color: logoColor,
-          border: `2px dashed ${logoColor}55`, overflow: 'hidden',
-        }}
-      >
-        {logo
-          ? <img src={logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <span style={{ fontSize: '1.1rem', fontWeight: 700 }}>{initials || '?'}</span>
-        }
-        <div style={{
-          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 10,
-          opacity: hover ? 1 : 0, transition: 'opacity 150ms',
-        }}>
-          <Camera size={20} color="#fff" />
-        </div>
-      </div>
-      <div>
-        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--foreground)', marginBottom: 3 }}>Company Logo</div>
-        <button type="button" onClick={() => fileRef.current?.click()}
-          style={{ fontSize: '0.75rem', color: '#178A4C', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 }}
-        >
-          {logo ? 'Change logo' : 'Upload logo'}
-        </button>
-        {logo && (
-          <button type="button" onClick={() => onChange('')}
-            style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 10px', fontWeight: 500 }}
-          >
-            Remove
-          </button>
-        )}
-        <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginTop: 3 }}>PNG, JPG — up to 2 MB</div>
-      </div>
-      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
-    </div>
-  );
-}
-
 // ── Detail modal ──────────────────────────────────────────────────────────────
 
-function CompanyDetailModal({ company, plans, onClose, onLogoChange }: {
+function CompanyDetailModal({ company, plans, onClose }: {
   company: Company;
   plans: FetchedPlan[];
   onClose: () => void;
-  onLogoChange: (logo: string) => void;
 }) {
-  const [logoHover, setLogoHover] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  function handleLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => { if (typeof ev.target?.result === 'string') onLogoChange(ev.target.result); };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  }
+  useEscape(onClose);
   const plan     = planStyle(company.plan, plans);
   const status   = STATUS_CONFIG[company.status];
   const eldColor = ELD_COLOR[company.eld] ?? '#94A3B8';
 
-  interface RowProps { icon: React.ReactNode; label: string; value: React.ReactNode; mono?: boolean; last?: boolean; }
-  const Row = ({ icon, label, value, mono = false, last = false }: RowProps) => (
+  interface RowProps { icon: React.ReactNode; label: string; value: React.ReactNode; last?: boolean; }
+  const Row = ({ icon, label, value, last = false }: RowProps) => (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 0', borderBottom: last ? 'none' : '1px solid var(--border)' }}>
       <span style={{ marginTop: 2, color: 'var(--muted-foreground)', flexShrink: 0 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>
           {label}
         </div>
-        <div style={{ fontSize: '0.83rem', color: 'var(--foreground)', fontWeight: 500, fontFamily: mono ? "'JetBrains Mono','Courier New',monospace" : 'inherit' }}>
+        <div style={{ fontSize: '0.83rem', color: 'var(--foreground)', fontWeight: 500 }}>
           {value}
         </div>
       </div>
@@ -587,25 +201,13 @@ function CompanyDetailModal({ company, plans, onClose, onLogoChange }: {
 
         <div className="overflow-y-auto px-6 py-4 flex-1">
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: 16, borderRadius: 12, backgroundColor: 'var(--muted)' }}>
-            <div
-              onClick={() => fileRef.current?.click()}
-              onMouseEnter={() => setLogoHover(true)}
-              onMouseLeave={() => setLogoHover(false)}
-              style={{ width: 56, height: 56, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: company.logoColor + '22', color: company.logoColor, cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
-            >
-              {company.logo
-                ? <img src={company.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <span style={{ fontSize: '1.1rem', fontWeight: 700 }}>{company.initials}</span>
-              }
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 10, opacity: logoHover ? 1 : 0, transition: 'opacity 150ms' }}>
-                <Camera size={16} color="#fff" />
-              </div>
+            <div style={{ width: 56, height: 56, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: company.logoColor + '22', color: company.logoColor }}>
+              <span style={{ fontSize: '1.1rem', fontWeight: 700 }}>{company.initials}</span>
             </div>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoFile} />
             <div>
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1.2, marginBottom: 6 }}>{company.name}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: '0.7rem', color: 'var(--muted-foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', padding: '2px 8px', borderRadius: 6 }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', padding: '2px 8px', borderRadius: 6 }}>
                   {company.mc}
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, backgroundColor: plan.bg, color: plan.color }}>
@@ -619,7 +221,7 @@ function CompanyDetailModal({ company, plans, onClose, onLogoChange }: {
             </div>
           </div>
 
-          <Row icon={<Shield size={14} />}       label="MC Number"           value={company.mc}           mono />
+          <Row icon={<Shield size={14} />}       label="MC number"           value={company.mc} />
           <Row icon={<Building2 size={14} />}    label="Company Name"        value={company.name} />
           <Row
             icon={
@@ -630,14 +232,14 @@ function CompanyDetailModal({ company, plans, onClose, onLogoChange }: {
             label="Owner Name"
             value={company.owner}
           />
-          <Row icon={<Phone size={14} />}        label="Owner Phone Number"  value={company.ownerPhone}   mono />
-          <Row icon={<Send size={14} />}         label="Owner Telegram"      value={company.ownerTelegram} mono />
+          <Row icon={<Phone size={14} />}        label="Owner phone"         value={company.ownerPhone || <Dash />} />
+          <Row icon={<Send size={14} />}         label="Owner Telegram"      value={company.ownerTelegram || <Dash />} />
           <Row
             icon={<CreditCardIcon />}
             label="Plan"
             value={<span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, backgroundColor: plan.bg, color: plan.color }}>{company.plan}</span>}
           />
-          <Row icon={<CalendarIcon />}           label="Plan Expiry Date"    value={company.planExpiry} />
+          <Row icon={<CalendarIcon />}           label="Plan expires"        value={fmtDate(company.planExpiry) || <Dash />} />
           <Row
             icon={<TruckIcon />}
             label="ELD"
@@ -667,13 +269,11 @@ interface FormState {
   mc: string; name: string;
   ownerId: string; owner: string; ownerPhone: string; ownerTelegram: string;
   plan: string; planExpiry: string; eld: string; status: Status;
-  logo: string;
 }
 const EMPTY_FORM: FormState = {
   mc: '', name: '',
   ownerId: '', owner: '', ownerPhone: '', ownerTelegram: '',
-  plan: 'Basic', planExpiry: '', eld: 'None', status: 'Active',
-  logo: '',
+  plan: '', planExpiry: '', eld: 'None', status: 'Active',
 };
 
 interface BoardUser {
@@ -684,6 +284,8 @@ interface BoardUser {
   phone: string;
   telegram: string;
 }
+
+const fieldLabel: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 4 };
 
 function CompanyModal({ mode, initial, plans, onClose, onSave }: {
   mode: 'create' | 'edit';
@@ -697,49 +299,33 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
   const [saving, setSaving]     = useState(false);
   const [serverError, setServerError] = useState('');
   const [users, setUsers]       = useState<BoardUser[]>([]);
-  const [userSearch, setUserSearch] = useState('');
-  const [userPickerOpen, setUserPickerOpen] = useState(false);
-  const userPickerRef = useRef<HTMLDivElement>(null);
-  const userSearchRef = useRef<HTMLInputElement>(null);
+  useEscape(onClose, !saving);
 
   useEffect(() => {
     api.get<BoardUser[]>('/users?kind=board').then(setUsers).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (!userPickerOpen) return;
-    const h = (e: MouseEvent) => {
-      if (userPickerRef.current && !userPickerRef.current.contains(e.target as Node)) {
-        setUserPickerOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [userPickerOpen]);
+  // A plan's length sets the expiry; picking a plan fills it in, and it stays editable.
+  function pickPlan(name: string) {
+    const matched = plans.find(p => p.name === name);
+    setForm(f => ({ ...f, plan: name, planExpiry: matched ? addDays(isoDay(new Date()), matched.duration) : f.planExpiry }));
+    setErrors(e => ({ ...e, plan: undefined, planExpiry: undefined }));
+  }
 
-  useEffect(() => {
-    if (userPickerOpen) setTimeout(() => userSearchRef.current?.focus(), 50);
-  }, [userPickerOpen]);
-
-  function selectUser(u: BoardUser) {
+  function pickOwner(id: string) {
+    const u = users.find(x => x.id === id);
+    if (!u) return;
     setForm(f => ({ ...f, ownerId: u.id, owner: u.full_name, ownerPhone: u.phone, ownerTelegram: u.telegram }));
-    setUserSearch('');
-    setUserPickerOpen(false);
     setErrors(e => ({ ...e, ownerId: undefined }));
   }
 
-  const filteredUsers = users.filter(u => {
-    const q = userSearch.toLowerCase();
-    return !q || u.full_name.toLowerCase().includes(q) || (u.login ?? u.email).toLowerCase().includes(q);
-  });
-
   function validate() {
     const e: Partial<Record<keyof FormState, string>> = {};
-    if (!form.name.trim())    e.name    = 'Required';
-    if (!form.ownerId.trim()) e.ownerId = 'Required';
-    if (!form.owner.trim())   e.owner   = 'Required';
-    if (!form.mc.trim())      e.mc      = 'Required';
-    if (!form.plan)           e.plan    = 'Required';
+    if (!form.mc.trim())      e.mc         = 'Required';
+    if (!form.name.trim())    e.name       = 'Required';
+    if (!form.ownerId.trim()) e.ownerId    = 'Required';
+    if (!form.plan)           e.plan       = 'Required';
+    if (!form.planExpiry)     e.planExpiry = 'Required';
     return e;
   }
 
@@ -753,7 +339,7 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
       await onSave(form);
     } catch (err) {
       if (err instanceof ApiException) {
-        if (err.code === 'conflict') setServerError('MC number or login already exists.');
+        if (err.code === 'conflict') setServerError('A company with this MC number already exists.');
         else setServerError(err.message || 'Something went wrong.');
       } else {
         setServerError('Unable to save. Please try again.');
@@ -762,39 +348,20 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
     }
   }
 
-  const set = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }));
-
-  const inputStyle = (key: keyof FormState) => ({
-    width: '100%', padding: '7px 11px', borderRadius: 8,
-    border: `1px solid ${errors[key] ? '#EF4444' : 'var(--border)'}`,
-    fontSize: '0.82rem', color: 'var(--foreground)', backgroundColor: 'var(--muted)',
-    outline: 'none', boxSizing: 'border-box' as const,
-  });
-
-  const labelStyle = { display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 4 } as const;
-
   const req = <span style={{ color: '#EF4444', marginLeft: 2 }}>*</span>;
+  const errorText = (key: keyof FormState) => errors[key] && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 2, display: 'block' }}>{errors[key]}</span>;
 
-  const field = (label: string, fkey: keyof FormState, type = 'text', placeholder = '', required = false) => (
+  const textField = (label: string, key: 'mc' | 'name', placeholder: string) => (
     <div>
-      <label style={labelStyle}>{label}{required && req}</label>
-      <input type={type} value={form[fkey] as string} placeholder={placeholder} onChange={set(fkey)} style={inputStyle(fkey)} />
-      {errors[fkey] && <span style={{ fontSize: '0.7rem', color: '#EF4444', marginTop: 2, display: 'block' }}>{errors[fkey]}</span>}
-    </div>
-  );
-
-  const selectField = (label: string, fkey: keyof FormState, options: string[], required = false) => (
-    <div>
-      <label style={labelStyle}>{label}{required && req}</label>
-      <CustomSelect value={form[fkey] as string} options={options} onChange={(v) => setForm(f => ({ ...f, [fkey]: v }))} />
-    </div>
-  );
-
-  const dateField = (label: string, fkey: keyof FormState, required = false) => (
-    <div>
-      <label style={labelStyle}>{label}{required && req}</label>
-      <DatePicker value={form[fkey] as string} onChange={(v) => setForm(f => ({ ...f, [fkey]: v }))} />
+      <label style={fieldLabel}>{label}{req}</label>
+      <input
+        className="field"
+        value={form[key]}
+        placeholder={placeholder}
+        aria-invalid={!!errors[key]}
+        onChange={(e) => { setForm(f => ({ ...f, [key]: e.target.value })); setErrors(er => ({ ...er, [key]: undefined })); }}
+      />
+      {errorText(key)}
     </div>
   );
 
@@ -802,12 +369,12 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}>
       <div className="rounded-2xl shadow-2xl w-full"
-        style={{ backgroundColor: 'var(--card)', maxWidth: 480, maxHeight: '90vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)' }}>
+        style={{ backgroundColor: 'var(--card)', maxWidth: 520, maxHeight: '90vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)' }}>
         <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--foreground)' }}>
-            {mode === 'create' ? 'Add New Company' : 'Edit Company'}
+            {mode === 'create' ? 'New company' : 'Edit company'}
           </h2>
-          <button onClick={onClose} disabled={saving} className="w-7 h-7 flex items-center justify-center rounded-lg"
+          <button onClick={onClose} disabled={saving} aria-label="Close" className="w-7 h-7 flex items-center justify-center rounded-lg"
             style={{ color: 'var(--muted-foreground)', backgroundColor: 'transparent', border: 'none', cursor: saving ? 'not-allowed' : 'pointer' }}
             onMouseEnter={(e) => { if (!saving) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
@@ -817,110 +384,45 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
         </div>
 
         <form onSubmit={handleSubmit} className="overflow-y-auto px-6 py-5 flex flex-col gap-3">
-          <LogoUpload
-            initials={form.name.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'}
-            logoColor="#178A4C"
-            logo={form.logo}
-            onChange={(v) => setForm(f => ({ ...f, logo: v }))}
-          />
-          <div style={{ borderTop: '1px solid var(--border)', marginBottom: 4 }} />
           <div className="grid grid-cols-2 gap-3">
-            {field('MC Number', 'mc', 'text', 'MC-000000', true)}
-            {field('Company Name', 'name', 'text', 'e.g. Acme Corp', true)}
-          </div>
-          {/* Owner user picker */}
-          <div ref={userPickerRef} style={{ position: 'relative' }}>
-            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>Owner {req}</label>
-            <button type="button"
-              onClick={() => setUserPickerOpen(o => !o)}
-              style={{
-                width: '100%', padding: '7px 11px', borderRadius: 8, textAlign: 'left',
-                border: `1px solid ${errors.ownerId ? '#EF4444' : userPickerOpen ? '#8FD3AE' : 'var(--border)'}`,
-                fontSize: '0.82rem', backgroundColor: 'var(--muted)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, outline: 'none',
-              }}>
-              {form.ownerId ? (
-                <span style={{ color: 'var(--foreground)', fontWeight: 500 }}>{form.owner}</span>
-              ) : (
-                <span style={{ color: 'var(--muted-foreground)' }}>Select a board user…</span>
-              )}
-              <ChevronDown size={13} style={{ flexShrink: 0, opacity: 0.5, transform: userPickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
-            </button>
-            {errors.ownerId && <span style={{ fontSize: '0.7rem', color: '#EF4444', marginTop: 2, display: 'block' }}>Required</span>}
-
-            {userPickerOpen && (
-              <div style={{
-                position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
-                zIndex: 9999, backgroundColor: 'var(--card)', border: '1px solid var(--border)',
-                borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)', overflow: 'hidden',
-              }}>
-                <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: 'var(--muted)', borderRadius: 7, padding: '5px 9px' }}>
-                    <Search size={13} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
-                    <input ref={userSearchRef} value={userSearch} onChange={e => setUserSearch(e.target.value)}
-                      placeholder="Search by name or email…"
-                      style={{ background: 'none', border: 'none', outline: 'none', fontSize: '0.8rem', color: 'var(--foreground)', width: '100%' }} />
-                  </div>
-                </div>
-                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                  {filteredUsers.length === 0 ? (
-                    <div style={{ padding: '14px 12px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>
-                      {users.length === 0 ? 'Loading users…' : 'No users match'}
-                    </div>
-                  ) : filteredUsers.map(u => (
-                    <button key={u.id} type="button" onClick={() => selectUser(u)}
-                      style={{
-                        width: '100%', padding: '9px 12px', textAlign: 'left', border: 'none', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        backgroundColor: u.id === form.ownerId ? '#ECF7F0' : 'transparent',
-                      }}
-                      onMouseEnter={e => { if (u.id !== form.ownerId) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
-                      onMouseLeave={e => { if (u.id !== form.ownerId) e.currentTarget.style.backgroundColor = 'transparent'; }}>
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, backgroundColor: colorFromStr(u.id) + '22', color: colorFromStr(u.id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700 }}>
-                        {u.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: u.id === form.ownerId ? '#178A4C' : 'var(--foreground)', lineHeight: 1.2 }}>{u.full_name}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.login || u.email}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {textField('MC number', 'mc', '000000')}
+            {textField('Company name', 'name', 'Acme Freight LLC')}
           </div>
 
           <div>
-            <label style={labelStyle}>Owner Name {req}</label>
-            <input
-              value={form.owner}
-              onChange={e => { setForm(f => ({ ...f, owner: e.target.value })); setErrors(er => ({ ...er, owner: undefined })); }}
-              placeholder="e.g. John Doe"
-              style={{ width: '100%', padding: '7px 11px', borderRadius: 8, border: `1px solid ${errors.owner ? '#EF4444' : 'var(--border)'}`, fontSize: '0.82rem', color: 'var(--foreground)', backgroundColor: 'var(--muted)', outline: 'none', boxSizing: 'border-box' }}
+            <label style={fieldLabel}>Owner{req}</label>
+            <SearchSelect
+              value={form.ownerId}
+              options={users.map(u => ({ value: u.id, label: u.full_name, sublabel: u.login || u.email }))}
+              placeholder={form.owner || 'Select a board user'}
+              onChange={pickOwner}
             />
-            {errors.owner && <span style={{ fontSize: '0.7rem', color: '#EF4444', marginTop: 2, display: 'block' }}>Required</span>}
+            {errorText('ownerId')}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={labelStyle}>Plan {req}</label>
-              <CustomSelect
-                value={form.plan}
-                options={plans.map(p => p.name)}
-                onChange={(v) => {
-                  const matched = plans.find(p => p.name === v);
-                  const expiry = matched
-                    ? (() => { const d = new Date(); d.setDate(d.getDate() + matched.duration); return d.toISOString().split('T')[0]; })()
-                    : form.planExpiry;
-                  setForm(f => ({ ...f, plan: v, planExpiry: expiry }));
-                }}
-              />
+              <label style={fieldLabel}>Plan{req}</label>
+              <SearchSelect value={form.plan} options={plans.map(p => ({ value: p.name, label: p.name }))} placeholder="Select a plan" onChange={pickPlan} searchable={false} />
+              {errorText('plan')}
             </div>
-            {dateField('Plan Expiry Date', 'planExpiry', true)}
+            <div>
+              <label style={fieldLabel}>Plan expires{req}</label>
+              <DatePicker label="Plan expires" value={form.planExpiry} invalid={!!errors.planExpiry}
+                onChange={(day) => { setForm(f => ({ ...f, planExpiry: day })); setErrors(e => ({ ...e, planExpiry: undefined })); }} />
+              {errorText('planExpiry')}
+            </div>
           </div>
+
           <div className="grid grid-cols-2 gap-3">
-            {selectField('ELD Provider', 'eld', ELD_OPTIONS)}
-            {selectField('Status', 'status', ['Active', 'Pending', 'Suspended'])}
+            <div>
+              <label style={fieldLabel}>ELD provider</label>
+              <SearchSelect value={form.eld} options={ELD_OPTIONS.map(o => ({ value: o, label: o }))} placeholder="None" onChange={(v) => setForm(f => ({ ...f, eld: v }))} searchable={false} />
+            </div>
+            <div>
+              <label style={fieldLabel}>Status</label>
+              <SearchSelect value={form.status} options={(['Active', 'Pending', 'Suspended'] as Status[]).map(o => ({ value: o, label: o }))} placeholder="Active" onChange={(v) => setForm(f => ({ ...f, status: v as Status }))} searchable={false} />
+            </div>
           </div>
 
           {serverError && (
@@ -932,18 +434,16 @@ function CompanyModal({ mode, initial, plans, onClose, onSave }: {
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose} disabled={saving}
               className="flex-1 py-2 rounded-lg"
-              style={{ fontSize: '0.83rem', fontWeight: 500, color: 'var(--foreground)', backgroundColor: 'var(--muted)', border: '1px solid var(--border)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
-              onMouseEnter={(e) => { if (!saving) (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#E5E7EB'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
+              style={{ fontSize: '0.83rem', fontWeight: 500, color: 'var(--foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
             >
               Cancel
             </button>
             <button type="submit" disabled={saving}
               className="flex-1 py-2 rounded-lg flex items-center justify-center gap-2"
-              style={{ fontSize: '0.83rem', fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.8 : 1 }}
+              style={{ fontSize: '0.83rem', fontWeight: 600, color: '#fff', backgroundColor: 'var(--primary)', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.8 : 1 }}
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
-              {mode === 'create' ? 'Add Company' : 'Save Changes'}
+              {mode === 'create' ? 'Add company' : 'Save changes'}
             </button>
           </div>
         </form>
@@ -964,11 +464,11 @@ export default function CompaniesPage() {
   const [isLoading, setIsLoading]       = useState(true);
   const [loadError, setLoadError]       = useState('');
   const [tab, setTab]           = useState<TabId>('all');
-  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch]     = useState('');
   const [planFilter, setPlanFilter] = useState<string>('all');
+  const [eldFilter, setEldFilter]   = useState<string>('all');
+  const [period, setPeriod]     = useState<Period>(ALL_TIME);
   const [page, setPage]         = useState(1);
-  const [allCounts, setAllCounts] = useState({ total: 0, active: 0, pending: 0, suspended: 0 });
 
   const [createOpen,   setCreateOpen]   = useState(false);
   const [editTarget,   setEditTarget]   = useState<Company | null>(null);
@@ -977,53 +477,49 @@ export default function CompaniesPage() {
   const [deleting,     setDeleting]     = useState(false);
   const [deleteError,  setDeleteError]  = useState<string | null>(null);
 
-  // Debounce search input
-  useEffect(() => {
-    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 350);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
-  // One-time: fetch plans only (stats come from every fetchCompanies response)
   useEffect(() => {
     api.get<FetchedPlan[]>('/plans').then(setPlans).catch(() => {});
   }, []);
 
+  // The whole list comes down once; every filter below works on it in the browser, so
+  // changing one never reloads the table.
   const fetchCompanies = useCallback(async () => {
     setIsLoading(true);
     setLoadError('');
     try {
-      const qs = new URLSearchParams();
-      if (tab !== 'all') qs.set('status', tab);
-      if (search)        qs.set('q', search);
-      if (planFilter !== 'all') qs.set('plan', planFilter);
-      const q = qs.toString();
-      const body = await api.getBody<{ data: ApiCompany[]; stats?: { total?: number; active?: number; pending?: number; suspended?: number } }>(`/companies${q ? `?${q}` : ''}`);
-      const companies = body.data ?? [];
-      setRows(companies.map(toUICompany));
-      setAllCounts({
-        total:     body.stats?.total     ?? companies.length,
-        active:    body.stats?.active    ?? companies.filter(c => c.status === 'Active').length,
-        pending:   body.stats?.pending   ?? companies.filter(c => c.status === 'Pending').length,
-        suspended: body.stats?.suspended ?? companies.filter(c => c.status === 'Suspended').length,
-      });
+      const companies = await api.get<ApiCompany[]>('/companies');
+      setRows((companies ?? []).map(toUICompany));
     } catch {
       setLoadError('Failed to load companies. Please refresh.');
     } finally {
       setIsLoading(false);
     }
-  }, [tab, search, planFilter]);
+  }, []);
 
   useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
+  useEffect(() => { setPage(1); }, [tab, search, planFilter, eldFilter, period]);
 
-  const TABS: TabItem<TabId>[] = [
-    { id: 'all',       label: 'All',       count: allCounts.total,     icon: <Building2 size={13} />    },
-    { id: 'Active',    label: 'Active',    count: allCounts.active,    icon: <CheckCircle2 size={13} /> },
-    { id: 'Pending',   label: 'Pending',   count: allCounts.pending,   icon: <Clock size={13} />        },
-    { id: 'Suspended', label: 'Suspended', count: allCounts.suspended, icon: <XCircle size={13} />      },
-  ];
+  // Everything but the status tab — the tabs and KPI cards count within this set.
+  const matched = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter(c =>
+      (!q || c.name.toLowerCase().includes(q) || c.mc.toLowerCase().includes(q) || c.owner.toLowerCase().includes(q)) &&
+      (planFilter === 'all' || c.plan === planFilter) &&
+      (eldFilter === 'all' || c.eld === eldFilter) &&
+      inPeriod(c.createdAt, period.from, period.to));
+  }, [rows, search, planFilter, eldFilter, period]);
+  const counts = useMemo(() => ({
+    total:     matched.length,
+    active:    matched.filter(c => c.status === 'Active').length,
+    pending:   matched.filter(c => c.status === 'Pending').length,
+    suspended: matched.filter(c => c.status === 'Suspended').length,
+  }), [matched]);
+  const shown = tab === 'all' ? matched : matched.filter(c => c.status === tab);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
-  const paginated  = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const eldOptions = ['all', ...Array.from(new Set([...ELD_OPTIONS, ...rows.map(c => c.eld).filter(Boolean)]))];
+
+  const totalPages = Math.max(1, Math.ceil(shown.length / PER_PAGE));
+  const paginated  = shown.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   function goPage(p: number) { setPage(Math.min(Math.max(1, p), totalPages)); }
 
@@ -1031,60 +527,40 @@ export default function CompaniesPage() {
     const created = await api.post<ApiCompany>('/companies', toApiPayload(f));
     setRows(prev => [toUICompany(created), ...prev]);
     setCreateOpen(false);
-    const s = created.status.toLowerCase() as 'active' | 'pending' | 'suspended';
-    setAllCounts(c => ({ ...c, total: c.total + 1, [s]: c[s] + 1 }));
   }
 
   async function handleEdit(f: FormState): Promise<void> {
     if (!editTarget) return;
     const updated = await api.put<ApiCompany>(`/companies/${editTarget.id}`, toApiPayload(f));
-    setRows(prev => prev.map(c => c.id === editTarget.id ? { ...toUICompany(updated), logo: f.logo || undefined } : c));
+    setRows(prev => prev.map(c => c.id === editTarget.id ? toUICompany(updated) : c));
     setEditTarget(null);
-  }
-
-  function handleLogoChange(id: string, logo: string) {
-    setRows(prev => prev.map(c => c.id === id ? { ...c, logo: logo || undefined } : c));
-    setViewTarget(prev => prev && prev.id === id ? { ...prev, logo: logo || undefined } : prev);
   }
 
   async function handleDelete(id: string) {
     setDeleting(true);
     setDeleteError(null);
     try {
-      const target = rows.find(c => c.id === id);
       await api.delete(`/companies/${id}`);
       setRows(prev => prev.filter(c => c.id !== id));
       setDeleteTarget(null);
-      if (target) {
-        const s = target.status.toLowerCase() as 'active' | 'pending' | 'suspended';
-        setAllCounts(c => ({ ...c, total: Math.max(0, c.total - 1), [s]: Math.max(0, c[s] - 1) }));
-      }
-      if (paginated.length === 1 && page > 1) setPage(p => p - 1);
     } catch (err) {
-      if (err instanceof ApiException) {
-        setDeleteError(err.message || 'Failed to delete company.');
-      } else {
-        setDeleteError('Unable to connect to the server.');
-      }
+      setDeleteError(err instanceof ApiException ? (err.message || 'Failed to delete company.') : 'Unable to connect to the server.');
     } finally {
       setDeleting(false);
     }
   }
 
-  const start = rows.length === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const end   = Math.min(page * PER_PAGE, rows.length);
-
   const TH = ({ children }: { children: React.ReactNode }) => (
-    <th style={{ textAlign: 'left', padding: '9px 14px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', letterSpacing: '0.07em', textTransform: 'uppercase', backgroundColor: 'var(--muted)', whiteSpace: 'nowrap' }}>
+    <th style={{ textAlign: 'left', padding: '9px 14px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
       {children}
     </th>
   );
 
   return (
-    <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
+    <Page>
 
       {/* Modals */}
-      {viewTarget   && <CompanyDetailModal company={viewTarget} plans={plans} onClose={() => setViewTarget(null)} onLogoChange={(logo) => handleLogoChange(viewTarget.id, logo)} />}
+      {viewTarget   && <CompanyDetailModal company={viewTarget} plans={plans} onClose={() => setViewTarget(null)} />}
       {createOpen   && <CompanyModal mode="create" plans={plans} initial={EMPTY_FORM} onClose={() => setCreateOpen(false)} onSave={handleCreate} />}
       {editTarget   && (
         <CompanyModal
@@ -1096,7 +572,6 @@ export default function CompaniesPage() {
             ownerPhone: editTarget.ownerPhone, ownerTelegram: editTarget.ownerTelegram,
             plan: editTarget.plan, planExpiry: editTarget.planExpiry,
             status: editTarget.status, eld: editTarget.eld,
-            logo: editTarget.logo ?? '',
           }}
           onClose={() => setEditTarget(null)}
           onSave={handleEdit}
@@ -1113,104 +588,46 @@ export default function CompaniesPage() {
         />
       )}
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-4 mb-5">
-        {[
-          { label: 'Total',     value: allCounts.total,     icon: <Building2 size={19} />,    iconBg: '#178A4C' },
-          { label: 'Active',    value: allCounts.active,    icon: <CheckCircle2 size={19} />, iconBg: '#10B981' },
-          { label: 'Suspended', value: allCounts.suspended, icon: <XCircle size={19} />,      iconBg: '#EF4444' },
-        ].map(({ label, value, icon, iconBg }) => (
-          <div key={label} style={{ backgroundColor: 'var(--card)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
-            <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--muted-foreground)', marginBottom: 6 }}>{label}</div>
-              <div style={{ fontSize: '1.7rem', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1 }}>
-                {isLoading ? <span style={{ opacity: 0.3 }}>—</span> : value}
-              </div>
-            </div>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff' }}>
-              {icon}
-            </div>
-          </div>
-        ))}
-      </div>
+      <KpiRow cols={4}>
+        <Kpi label="Total"     value={isLoading ? <Dash /> : counts.total}     icon={<Building2 size={17} />} />
+        <Kpi label="Active"    value={isLoading ? <Dash /> : counts.active}    icon={<CheckCircle2 size={17} />} />
+        <Kpi label="Pending"   value={isLoading ? <Dash /> : counts.pending}   icon={<Clock size={17} />} />
+        <Kpi label="Suspended" value={isLoading ? <Dash /> : counts.suspended} icon={<XCircle size={17} />} />
+      </KpiRow>
 
-      {/* Page header */}
-      <div className="flex items-start justify-between mb-5">
-        <div />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 500, color: 'var(--foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', cursor: 'pointer' }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--card)')}
-          >
-            <Download size={15} /> Export
-          </button>
-          {canCreate && (
-          <button
-            onClick={() => setCreateOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg,#178A4C 0%,#136F3D 100%)', border: 'none', cursor: 'pointer' }}
-          >
-            <Plus size={15} /> New Company
-          </button>
-          )}
-        </div>
-      </div>
+      <Card>
+        <Toolbar action={canCreate && <PrimaryButton icon={<Plus size={15} />} onClick={() => setCreateOpen(true)}>New company</PrimaryButton>}>
+          <SearchBox value={search} onChange={setSearch} placeholder="Search name, MC or owner" />
+          <Dropdown<TabId> label="Status" options={['all', 'Active', 'Pending', 'Suspended']} value={tab} onChange={setTab} getOptionLabel={v => v === 'all' ? 'All statuses' : v} />
+          <Dropdown<string> label="Plan" options={['all', ...plans.map(p => p.name)]} value={planFilter} onChange={setPlanFilter} getOptionLabel={v => v === 'all' ? 'All plans' : v} />
+          <Dropdown<string> label="ELD" options={eldOptions} value={eldFilter} onChange={setEldFilter} getOptionLabel={v => v === 'all' ? 'All ELDs' : v} />
+          <PeriodFilter value={period} onChange={setPeriod} weekStartDay={1} />
+        </Toolbar>
 
-      {/* Card */}
-      <div className="rounded-xl overflow-hidden" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}>
-
-        {/* Controls bar */}
-        <div className="flex items-center justify-between gap-3 px-4 py-3 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
-          <FilterTabs<TabId> tabs={TABS} active={tab} onChange={(id) => { setTab(id); setPage(1); }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: 'var(--muted)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 12px', width: 220 }}>
-              <Search size={14} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
-              <input
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search companies..."
-                style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '0.8rem', color: 'var(--foreground)', width: '100%' }}
-              />
-            </div>
-            <Dropdown<string> label="Plan" options={['all', ...plans.map(p => p.name)]} value={planFilter} onChange={(v) => { setPlanFilter(v); setPage(1); }} getOptionLabel={v => v === 'all' ? 'All Plans' : v} />
-          </div>
-        </div>
-
-        {/* Loading / error states */}
-        {isLoading && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '56px 0', color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
-            <Loader2 size={18} className="animate-spin" /> Loading companies…
-          </div>
-        )}
-
-        {!isLoading && loadError && (
-          <div style={{ textAlign: 'center', padding: '56px 0', color: '#B91C1C', fontSize: '0.85rem' }}>
-            {loadError}
-          </div>
-        )}
+        <TableState loading={isLoading} error={loadError || undefined} onRetry={fetchCompanies} what="companies" />
 
         {/* Table */}
         {!isLoading && !loadError && (
-          <div className="overflow-x-auto">
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   <TH>MC</TH>
                   <TH>Name</TH>
-                  <TH>Owner Name</TH>
+                  <TH>Owner</TH>
                   <TH>Plan</TH>
-                  <TH>Plan Expiry</TH>
+                  <TH>Plan expires</TH>
                   <TH>Registered</TH>
                   <TH>Status</TH>
                   <TH>ELD</TH>
-                  <TH>Actions</TH>
+                  <th className="pin" />
                 </tr>
               </thead>
               <tbody>
                 {paginated.length === 0 ? (
                   <tr>
                     <td colSpan={9} style={{ textAlign: 'center', padding: '56px 0', color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
-                      No companies match your filters.
+                      {rows.length === 0 ? 'No companies yet.' : 'No companies match your filters.'}
                     </td>
                   </tr>
                 ) : paginated.map((c, i) => {
@@ -1220,22 +637,17 @@ export default function CompaniesPage() {
                   return (
                     <tr key={c.id}
                       style={{ borderBottom: i < paginated.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'default' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FAFBFF')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <td style={{ padding: '11px 14px' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: '0.7rem', color: 'var(--muted-foreground)', letterSpacing: '0.02em' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', letterSpacing: '0.02em' }}>
                           {c.mc}
                         </span>
                       </td>
 
                       <td style={{ padding: '11px 14px' }}>
                         <button onClick={() => setViewTarget(c)} style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                          <div style={{ width: 32, height: 32, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: c.logoColor + '1A', color: c.logoColor, overflow: 'hidden' }}>
-                            {c.logo
-                              ? <img src={c.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>{c.initials}</span>
-                            }
+                          <div style={{ width: 32, height: 32, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: c.logoColor + '1A', color: c.logoColor }}>
+                            <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>{c.initials}</span>
                           </div>
                           <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--foreground)', whiteSpace: 'nowrap' }}>{c.name}</span>
                         </button>
@@ -1257,11 +669,11 @@ export default function CompaniesPage() {
                       </td>
 
                       <td style={{ padding: '11px 14px' }}>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>{c.planExpiry}</span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>{fmtDate(c.planExpiry) || <Dash />}</span>
                       </td>
 
                       <td style={{ padding: '11px 14px' }}>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>{c.registeredDate}</span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>{fmtDate(c.createdAt)}</span>
                       </td>
 
                       <td style={{ padding: '11px 14px' }}>
@@ -1275,26 +687,12 @@ export default function CompaniesPage() {
                         <span style={{ fontSize: '0.78rem', fontWeight: 600, color: eldColor, whiteSpace: 'nowrap' }}>{c.eld}</span>
                       </td>
 
-                      <td style={{ padding: '11px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                          {canUpdate && (
-                          <button onClick={() => setEditTarget(c)} title="Edit"
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--muted)')}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
-                            <Pencil size={13} />
-                          </button>
-                          )}
-                          {canDelete && (
-                          <button onClick={() => setDeleteTarget(c)} title="Delete"
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #FECACA', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FEE2E2')}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FEF2F2')}>
-                            <Trash2 size={13} />
-                          </button>
-                          )}
-                          {!canUpdate && !canDelete && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>—</span>}
-                        </div>
+                      <td className="pin">
+                        <RowActions>
+                          {canUpdate && <IconButton title="Edit" onClick={() => setEditTarget(c)}><Pencil size={13} /></IconButton>}
+                          {canDelete && <IconButton title="Delete" danger onClick={() => setDeleteTarget(c)}><Trash2 size={13} /></IconButton>}
+                          {!canUpdate && !canDelete && <Dash />}
+                        </RowActions>
                       </td>
                     </tr>
                   );
@@ -1304,44 +702,8 @@ export default function CompaniesPage() {
           </div>
         )}
 
-        {/* Pagination */}
-        {!isLoading && !loadError && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>
-              Showing {start}–{end} of {rows.length} companies
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <button
-                onClick={() => goPage(page - 1)} disabled={page === 1}
-                style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.78rem', fontWeight: 500, cursor: page === 1 ? 'not-allowed' : 'pointer', color: page === 1 ? 'var(--muted-foreground)' : 'var(--foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', opacity: page === 1 ? 0.5 : 1 }}
-              >
-                Prev
-              </button>
-
-              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                const p = totalPages <= 7 ? i + 1 : i < 3 ? i + 1 : i === 3 ? -1 : totalPages - (6 - i);
-                if (p === -1) return <span key="ellipsis" style={{ padding: '0 4px', color: 'var(--muted-foreground)', fontSize: '0.78rem' }}>…</span>;
-                return (
-                  <button key={p} onClick={() => goPage(p)}
-                    style={{ width: 30, height: 30, borderRadius: 7, fontSize: '0.78rem', fontWeight: p === page ? 600 : 400, cursor: 'pointer', backgroundColor: p === page ? '#178A4C' : 'transparent', color: p === page ? '#fff' : 'var(--muted-foreground)', border: 'none' }}
-                    onMouseEnter={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--muted)'; }}
-                    onMouseLeave={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-
-              <button
-                onClick={() => goPage(page + 1)} disabled={page === totalPages}
-                style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.78rem', fontWeight: 500, cursor: page === totalPages ? 'not-allowed' : 'pointer', color: page === totalPages ? 'var(--muted-foreground)' : 'var(--foreground)', backgroundColor: 'var(--card)', border: '1px solid var(--border)', opacity: page === totalPages ? 0.5 : 1 }}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+        {!isLoading && !loadError && <Pager page={page} totalPages={totalPages} total={shown.length} perPage={PER_PAGE} onPage={goPage} />}
+      </Card>
+    </Page>
   );
 }

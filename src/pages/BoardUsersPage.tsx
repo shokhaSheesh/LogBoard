@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, Plus, Pencil, Trash2, X, Users, Loader2, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Users, UserCheck, UserX, Loader2, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { FilterTabs, type TabItem } from '@/components/shared/FilterTabs';
 import { Dropdown } from '@/components/shared/Dropdown';
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal';
+import { Kpi } from '@/components/shared/Kpi';
+import { Card, Dash, IconButton, KpiRow, Page, Pager, PrimaryButton, RowActions, SearchBox, TableState, Toolbar } from '@/components/shared/ui';
+import { fmtDateTime } from '@/lib/dates';
+import { useEscape } from '@/lib/useEscape';
 import { useAuth } from '@/context/AuthContext';
 import { api, ApiException } from '@/lib/api';
 
@@ -101,11 +105,7 @@ function roleLabel(slug: string): string {
 }
 
 function formatDate(iso: string): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+  return fmtDateTime(iso) || '—';
 }
 
 function toUIUser(u: ApiUser, companies: ApiCompany[]): BoardUser {
@@ -138,6 +138,7 @@ function toUIUser(u: ApiUser, companies: ApiCompany[]): BoardUser {
 function CredsModal({ name, login, password, onClose }: {
   name: string; login: string; password: string; onClose: () => void;
 }) {
+  useEscape(onClose);
   const [copied, setCopied] = useState<string | null>(null);
 
   function copy(text: string, key: string) {
@@ -150,7 +151,7 @@ function CredsModal({ name, login, password, onClose }: {
     <div style={{ backgroundColor: 'var(--muted)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>{label}</div>
-        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)', fontFamily: key === 'pass' ? 'monospace' : undefined, wordBreak: 'break-all' }}>{value}</div>
+        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)', wordBreak: 'break-all' }}>{value}</div>
       </div>
       <button type="button" onClick={() => copy(value, key)}
         style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: copied === key ? '#ECFDF5' : 'var(--background)', color: copied === key ? '#059669' : 'var(--muted-foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -178,7 +179,7 @@ function CredsModal({ name, login, password, onClose }: {
           {row('Password', password, 'pass')}
         </div>
         <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)' }}>
-          <button onClick={onClose} style={{ width: '100%', height: 38, borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
+          <button onClick={onClose} style={{ width: '100%', height: 38, borderRadius: 8, cursor: 'pointer', backgroundColor: 'var(--primary)', border: 'none', color: '#fff', fontSize: '0.83rem', fontWeight: 600 }}>
             Done
           </button>
         </div>
@@ -200,17 +201,10 @@ function UserModal({
   const [form, setForm]           = useState<FormState>(initial);
   const [showPass, setShowPass]   = useState(false);
   const [saving, setSaving]       = useState(false);
+  useEscape(onClose, !saving);
   const [serverError, setServerError] = useState('');
 
-  const inp: React.CSSProperties = {
-    width: '100%', height: 38, padding: '0 11px', borderRadius: 8,
-    border: '1px solid var(--border)', backgroundColor: 'var(--background)',
-    color: 'var(--foreground)', fontSize: '0.83rem', outline: 'none', boxSizing: 'border-box',
-  };
-  const lbl: React.CSSProperties = {
-    display: 'block', fontSize: '0.75rem', fontWeight: 600,
-    color: 'var(--muted-foreground)', marginBottom: 5,
-  };
+  const lbl: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: 4 };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -265,20 +259,20 @@ function UserModal({
           <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '65vh', overflowY: 'auto' }}>
             <div>
               <label style={lbl}>Full Name <span style={{ color: '#EF4444' }}>*</span></label>
-              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="John Doe" style={inp} required disabled={saving} />
+              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="John Doe" className="field" required disabled={saving} />
             </div>
             <div>
               <label style={lbl}>Login <span style={{ color: '#EF4444' }}>*</span></label>
-              <input type="text" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="user@company.io" style={inp} required disabled={saving} />
+              <input type="text" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="user@company.io" className="field" required disabled={saving} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={lbl}>Phone</label>
-                <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 (555) 000-0000" style={inp} disabled={saving} />
+                <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 (555) 000-0000" className="field" disabled={saving} />
               </div>
               <div>
                 <label style={lbl}>Telegram</label>
-                <input value={form.telegram} onChange={e => setForm(f => ({ ...f, telegram: e.target.value }))} placeholder="@username" style={inp} disabled={saving} />
+                <input value={form.telegram} onChange={e => setForm(f => ({ ...f, telegram: e.target.value }))} placeholder="@username" className="field" disabled={saving} />
               </div>
             </div>
             {mode === 'edit' && (
@@ -301,7 +295,7 @@ function UserModal({
                     value={form.password}
                     onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                     placeholder={mode === 'edit' ? '••••••••' : 'Set password'}
-                    style={{ ...inp, paddingRight: 36 }}
+                    className="field" style={{ paddingRight: 36 }}
                     required={mode === 'create'}
                     disabled={saving}
                   />
@@ -343,7 +337,7 @@ function UserModal({
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'var(--muted)' : 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              style={{ flex: 2, height: 38, borderRadius: 8, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'var(--muted)' : 'var(--primary)', border: 'none', color: saving ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               {saving && <Loader2 size={14} className="animate-spin" />}
               {saving ? 'Saving…' : (mode === 'create' ? 'Add User' : 'Save Changes')}
             </button>
@@ -357,13 +351,14 @@ function UserModal({
 // ── UserDetailModal ───────────────────────────────────────────────────────────
 
 function UserDetailModal({ user, onClose, onEdit, editLoading }: { user: BoardUser; onClose: () => void; onEdit: () => void; editLoading?: boolean }) {
+  useEscape(onClose);
   const rs = ROLE_STYLE[user.role] ?? DEFAULT_ROLE_STYLE;
   const ss = STATUS_CONFIG[user.status];
 
   const Field = ({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
-      <span style={{ fontSize: '0.85rem', color: 'var(--foreground)', fontFamily: mono ? 'monospace' : undefined, wordBreak: 'break-all' }}>{value}</span>
+      <span style={{ fontSize: '0.85rem', color: 'var(--foreground)', wordBreak: 'break-all' }}>{value}</span>
     </div>
   );
 
@@ -435,7 +430,7 @@ function UserDetailModal({ user, onClose, onEdit, editLoading }: { user: BoardUs
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
             Close
           </button>
-          <button onClick={onEdit} disabled={editLoading} style={{ flex: 2, height: 38, borderRadius: 8, cursor: editLoading ? 'not-allowed' : 'pointer', background: editLoading ? 'var(--muted)' : 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: editLoading ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <button onClick={onEdit} disabled={editLoading} style={{ flex: 2, height: 38, borderRadius: 8, cursor: editLoading ? 'not-allowed' : 'pointer', background: editLoading ? 'var(--muted)' : 'var(--primary)', border: 'none', color: editLoading ? 'var(--muted-foreground)' : '#fff', fontSize: '0.83rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             {editLoading && <Loader2 size={14} className="animate-spin" />}
             {editLoading ? 'Loading…' : 'Edit User'}
           </button>
@@ -555,8 +550,6 @@ export default function BoardUsersPage() {
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
   const paginated  = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const start      = rows.length === 0 ? 0 : (page - 1) * PER_PAGE + 1;
-  const end        = Math.min(page * PER_PAGE, rows.length);
   function goPage(p: number) { setPage(Math.min(Math.max(1, p), totalPages)); }
 
   async function handleCreate(f: FormState): Promise<void> {
@@ -626,13 +619,13 @@ export default function BoardUsersPage() {
   ];
 
   const TH = ({ children, right }: { children: React.ReactNode; right?: boolean }) => (
-    <th style={{ textAlign: right ? 'right' : 'left', padding: '9px 14px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', letterSpacing: '0.07em', textTransform: 'uppercase', backgroundColor: 'var(--muted)', whiteSpace: 'nowrap' }}>
+    <th style={{ textAlign: right ? 'right' : 'left', padding: '9px 14px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--muted-foreground)', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
       {children}
     </th>
   );
 
   return (
-    <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
+    <Page>
       {/* Modals */}
       {createOpen && (
         <UserModal mode="create" initial={EMPTY_FORM} onClose={() => setCreateOpen(false)} onSave={handleCreate} />
@@ -666,54 +659,16 @@ export default function BoardUsersPage() {
 
       {createdCreds && <CredsModal name={createdCreds.name} login={createdCreds.login} password={createdCreds.password} onClose={() => setCreatedCreds(null)} />}
 
-      {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-        {[
-          { label: 'Total',     value: allCounts.total,     iconBg: '#178A4C' },
-          { label: 'Active',    value: allCounts.active,    iconBg: '#10B981' },
-          { label: 'Suspended', value: allCounts.suspended, iconBg: '#EF4444' },
-        ].map(({ label, value, iconBg }) => (
-          <div key={label} style={{ backgroundColor: 'var(--card)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
-            <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--muted-foreground)', marginBottom: 6 }}>{label}</div>
-              <div style={{ fontSize: '1.7rem', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1 }}>
-                {isLoading ? <Loader2 size={20} className="animate-spin" style={{ color: 'var(--muted-foreground)' }} /> : value}
-              </div>
-            </div>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-              <Users size={19} />
-            </div>
-          </div>
-        ))}
-      </div>
+      <KpiRow>
+        <Kpi label="Total"     value={isLoading && rows.length === 0 ? <Dash /> : allCounts.total}     icon={<Users size={17} />} />
+        <Kpi label="Active"    value={isLoading && rows.length === 0 ? <Dash /> : allCounts.active}    icon={<UserCheck size={17} />} />
+        <Kpi label="Suspended" value={isLoading && rows.length === 0 ? <Dash /> : allCounts.suspended} icon={<UserX size={17} />} />
+      </KpiRow>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <h1 style={{ color: 'var(--foreground)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>Board Users</h1>
-          <p style={{ color: 'var(--muted-foreground)', fontSize: '0.83rem', marginTop: 3 }}>Management of all users within tenant workspaces</p>
-        </div>
-        {canCreate && (
-        <button
-          onClick={() => setCreateOpen(true)}
-          disabled={isLoading}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: isLoading ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #178A4C 0%, #136F3D 100%)', border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 600, opacity: isLoading ? 0.6 : 1 }}
-        >
-          <Plus size={15} /> Add Board User
-        </button>
-        )}
-      </div>
-
-      {/* Table card */}
-      <div style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-        {/* Controls */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <Card>
+        <Toolbar action={canCreate && <PrimaryButton icon={<Plus size={15} />} onClick={() => setCreateOpen(true)} disabled={isLoading}>Add user</PrimaryButton>}>
+          <SearchBox value={searchInput} onChange={setSearchInput} placeholder="Search users" />
           <FilterTabs<TabId> tabs={TABS} active={tab} onChange={t => { setTab(t); setPage(1); }} />
-          <div style={{ flex: 1 }} />
-          <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)', pointerEvents: 'none' }} />
-            <input value={searchInput} onChange={e => setSearchInput(e.target.value)} placeholder="Search users..." style={{ paddingLeft: 28, paddingRight: 10, height: 34, borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.8rem', outline: 'none', width: 190 }} />
-          </div>
           <Dropdown<string>
             label="Company"
             options={companyFilterOptions.map(o => o.id)}
@@ -728,31 +683,16 @@ export default function BoardUsersPage() {
             onChange={v => { setRoleFilter(v); setPage(1); }}
             getOptionLabel={id => roleFilterOptions.find(o => o.id === id)?.name ?? id}
           />
-        </div>
+        </Toolbar>
 
-        {/* Loading */}
-        {isLoading && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted-foreground)', fontSize: '0.85rem', padding: '48px 16px', justifyContent: 'center' }}>
-            <Loader2 size={18} className="animate-spin" /> Loading board users…
-          </div>
-        )}
-
-        {/* Error */}
-        {!isLoading && loadError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, margin: 16, padding: '12px 16px', color: '#DC2626', fontSize: '0.85rem' }}>
-            {loadError}
-            <button onClick={fetchAll} style={{ marginLeft: 'auto', fontSize: '0.8rem', fontWeight: 600, color: '#DC2626', background: 'none', border: '1px solid #FECACA', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
-              Retry
-            </button>
-          </div>
-        )}
+        <TableState loading={isLoading && rows.length === 0} error={loadError ?? undefined} onRetry={fetchAll} what="users" />
 
         {/* Table */}
-        {!isLoading && !loadError && (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        {!(isLoading && rows.length === 0) && !loadError && (
+          <div style={{ overflowX: 'auto', opacity: isLoading ? 0.55 : 1, transition: 'opacity 0.15s' }}>
+            <table className="tbl">
               <thead>
-                <tr><TH>User</TH><TH>Login</TH><TH>Company</TH><TH>Role</TH><TH>Status</TH><TH right>Actions</TH></tr>
+                <tr><TH>User</TH><TH>Login</TH><TH>Company</TH><TH>Role</TH><TH>Status</TH><th className="pin" /></tr>
               </thead>
               <tbody>
                 {paginated.map((u, i) => {
@@ -775,7 +715,7 @@ export default function BoardUsersPage() {
                           </div>
                         </button>
                       </td>
-                      <td style={{ padding: '11px 14px' }}><span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', fontFamily: 'monospace' }}>{u.login}</span></td>
+                      <td style={{ padding: '11px 14px' }}><span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>{u.login}</span></td>
                       <td style={{ padding: '11px 14px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           {u.companyNames.length === 0
@@ -798,26 +738,12 @@ export default function BoardUsersPage() {
                           <span style={{ fontSize: '0.82rem', fontWeight: 500, color: ss.color }}>{u.status}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '11px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                          {canUpdate && (
-                          <button onClick={() => openEdit(u)} title="Edit" disabled={editingId === u.id}
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', cursor: editingId === u.id ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: editingId === u.id ? 0.6 : 1 }}
-                            onMouseEnter={e => { if (!editingId) e.currentTarget.style.backgroundColor = 'var(--muted)'; }}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--background)')}>
-                            {editingId === u.id ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />}
-                          </button>
-                          )}
-                          {canDelete && (
-                          <button onClick={() => setDeleteTarget(u)} title="Delete"
-                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #FECACA', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FEE2E2')}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FEF2F2')}>
-                            <Trash2 size={13} />
-                          </button>
-                          )}
-                          {!canUpdate && !canDelete && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>—</span>}
-                        </div>
+                      <td className="pin">
+                        <RowActions>
+                          {canUpdate && <IconButton title="Edit" onClick={() => openEdit(u)} busy={editingId === u.id}><Pencil size={13} /></IconButton>}
+                          {canDelete && <IconButton title="Delete" danger onClick={() => setDeleteTarget(u)}><Trash2 size={13} /></IconButton>}
+                          {!canUpdate && !canDelete && <Dash />}
+                        </RowActions>
                       </td>
                     </tr>
                   );
@@ -830,23 +756,8 @@ export default function BoardUsersPage() {
           </div>
         )}
 
-        {/* Pagination */}
-        {!isLoading && !loadError && (
-          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)' }}>Showing {start}–{end} of {rows.length} users</span>
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-              <button onClick={() => goPage(page - 1)} disabled={page === 1} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: page === 1 ? 'var(--muted-foreground)' : 'var(--foreground)', fontSize: '0.78rem', fontWeight: 500, cursor: page === 1 ? 'default' : 'pointer' }}>Prev</button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1).map((p, idx, arr) => (
-                <span key={p} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {idx > 0 && arr[idx - 1] !== p - 1 && <span style={{ fontSize: '0.78rem', color: 'var(--muted-foreground)', padding: '0 2px' }}>…</span>}
-                  <button onClick={() => goPage(p)} style={{ width: 30, height: 30, borderRadius: 7, border: 'none', backgroundColor: p === page ? '#178A4C' : 'transparent', color: p === page ? '#fff' : 'var(--muted-foreground)', fontSize: '0.78rem', fontWeight: p === page ? 600 : 400, cursor: 'pointer' }}>{p}</button>
-                </span>
-              ))}
-              <button onClick={() => goPage(page + 1)} disabled={page === totalPages} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: page === totalPages ? 'var(--muted-foreground)' : 'var(--foreground)', fontSize: '0.78rem', fontWeight: 500, cursor: page === totalPages ? 'default' : 'pointer' }}>Next</button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+        {!(isLoading && rows.length === 0) && !loadError && <Pager page={page} totalPages={totalPages} total={rows.length} perPage={PER_PAGE} onPage={goPage} />}
+      </Card>
+    </Page>
   );
 }

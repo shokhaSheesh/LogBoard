@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import { useEscape } from '@/lib/useEscape';
 
 interface DeleteConfirmModalProps {
   title: string;
@@ -22,6 +23,7 @@ export function DeleteConfirmModal({
   loading = false,
   error,
 }: DeleteConfirmModalProps) {
+  useEscape(onCancel, !loading);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
