@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://dboard-d97x.onrender.com',
+        target: 'https://brelo.sahl.uz',
         changeOrigin: true,
         secure: true,
       },

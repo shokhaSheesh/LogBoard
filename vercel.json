@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://dboard-d97x.onrender.com/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://brelo.sahl.uz/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
