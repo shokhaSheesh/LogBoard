@@ -12,6 +12,7 @@ const CRUMBS: Record<string, string[]> = {
   '/admin/admin-users':        ['Users', 'Admin Users'],
   '/admin/roles-permissions':  ['Access', 'Roles & Permissions'],
   '/admin/permission-modules': ['Access', 'Permission Modules'],
+  '/admin/map-keys':           ['Integrations', 'Map Keys'],
 };
 
 interface TopHeaderProps {

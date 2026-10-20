@@ -2,7 +2,7 @@ import { NavLink } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import { SCREEN_READ } from '@/lib/permissions';
 import { BRAND_NAME, BrandMark } from '@/components/shared/Brand';
-import { ChartPie, Building2, CreditCard, Bell, Users, ShieldCheck, KeyRound, Blocks } from 'lucide-react';
+import { ChartPie, Building2, CreditCard, Bell, Users, ShieldCheck, KeyRound, Blocks, Map as MapIcon } from 'lucide-react';
 
 interface NavItemDef { path: string; label: string; icon: React.ElementType }
 interface NavSection { title: string; items: NavItemDef[] }
@@ -25,6 +25,9 @@ const NAV_SECTIONS: NavSection[] = [
   { title: 'Access', items: [
     { path: '/admin/roles-permissions',  label: 'Roles & Permissions', icon: KeyRound },
     { path: '/admin/permission-modules', label: 'Permission Modules',  icon: Blocks },
+  ] },
+  { title: 'Integrations', items: [
+    { path: '/admin/map-keys',           label: 'Map Keys',            icon: MapIcon },
   ] },
 ];
 

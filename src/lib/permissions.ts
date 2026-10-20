@@ -13,4 +13,5 @@ export const SCREEN_READ: Record<string, string> = {
   '/admin/admin-users':        'board_users.read',
   '/admin/roles-permissions':  'roles.read',
   '/admin/permission-modules': 'modules.read',
+  '/admin/map-keys':           'map_keys.read',
 };

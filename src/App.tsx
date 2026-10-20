@@ -10,6 +10,7 @@ import BoardUsersPage from '@/pages/BoardUsersPage';
 import AdminUsersPage from '@/pages/AdminUsersPage';
 import RolesPermissionsPage from '@/pages/RolesPermissionsPage';
 import PermissionModulesPage from '@/pages/PermissionModulesPage';
+import MapKeysPage from '@/pages/MapKeysPage';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
 import ErrorPage from '@/pages/ErrorPage';
 import { Gated } from '@/components/shared/Gated';
@@ -61,6 +62,7 @@ const router = createBrowserRouter([
           { path: 'admin-users', element: <Gated permission="board_users.read"><AdminUsersPage /></Gated> },
           { path: 'roles-permissions', element: <Gated permission="roles.read"><RolesPermissionsPage /></Gated> },
           { path: 'permission-modules', element: <Gated permission="modules.read"><PermissionModulesPage /></Gated> },
+          { path: 'map-keys', element: <Gated permission="map_keys.read"><MapKeysPage /></Gated> },
         ],
       },
     ],
