@@ -49,7 +49,11 @@ export default function LoginPage() {
       navigate('/admin/dashboard');
     } catch (err) {
       if (err instanceof ApiException) {
-        if (err.code === 'invalid_credentials') {
+        if (err.status === 429) {
+          const s = err.retryAfter;
+          const wait = !s ? 'a few minutes' : s < 60 ? `${Math.ceil(s)} seconds` : s < 3600 ? `${Math.ceil(s / 60)} minute${Math.ceil(s / 60) === 1 ? '' : 's'}` : `${Math.ceil(s / 3600)} hour${Math.ceil(s / 3600) === 1 ? '' : 's'}`;
+          setError(`Too many sign-in attempts. Try again in ${wait}.`);
+        } else if (err.code === 'invalid_credentials') {
           setError('Invalid login or password.');
         } else if (err.code === 'invalid_request') {
           setError('Please check your login and password.');

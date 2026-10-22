@@ -5,6 +5,9 @@ function getToken(): string | null {
 }
 
 export class ApiException extends Error {
+  // On a 429, the seconds to wait before trying again, when the server said (Retry-After, or
+  // error.retry_after in the body).
+  retryAfter?: number;
   constructor(
     public readonly status: number,
     public readonly code: string,
@@ -29,11 +32,17 @@ async function request<T>(path: string, init: RequestInit = {}, unwrapData = tru
 
   if (res.status === 204) return undefined as T;
 
-  const body = await res.json();
+  // A gateway in front of the API (nginx) can answer with an HTML page, not JSON.
+  const body = await res.json().catch(() => ({}));
 
   if (!res.ok) {
     const err = body.error ?? { code: 'internal', message: 'Unexpected error' };
-    throw new ApiException(res.status, err.code, err.message);
+    const ex = new ApiException(res.status, err.code, err.message);
+    if (res.status === 429) {
+      const wait = Number(res.headers.get('Retry-After') ?? err.retry_after);
+      if (Number.isFinite(wait) && wait > 0) ex.retryAfter = wait;
+    }
+    throw ex;
   }
 
   return (unwrapData ? body.data : body) as T;
